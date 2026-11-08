@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <title>Anmelden – LMA Coop</title>
+  <script type="module" src="./src/login.js"></script>
+</head>
+<body class="d-flex flex-column">
+  <div class="page page-center">
+    <div class="container container-tight py-4">
+      <div class="text-center mb-4"><span class="navbar-brand-text h2 d-inline-flex align-items-center"><img src="/img/lma-logo-mark.svg" alt="" class="brand-logo" width="28" height="28">LMA Coop</span></div>
+      <div class="text-end mb-2"><button class="btn btn-ghost-secondary" id="lang-switch" type="button"></button></div>
+      <form class="card card-md" id="login-form" autocomplete="on">
+        <div class="card-body">
+          <h1 class="card-title text-center mb-4 h2">Anmelden</h1>
+          <div class="mb-3">
+            <label class="form-label" for="username">Benutzername</label>
+            <input class="form-control" id="username" name="username" autocomplete="username" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Passwort</label>
+            <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <div class="alert alert-danger d-none" id="login-error" role="alert"></div>
+          <button class="btn btn-primary w-100" type="submit">Anmelden</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

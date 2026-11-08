@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/
+.env
+*.sqlite
+*.sqlite-*
+*.db
+.DS_Store
+.playwright-mcp/

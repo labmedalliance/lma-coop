@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <title>Dokument – LMA Coop</title>
+  <script type="module" src="./src/editor.js"></script>
+</head>
+<body class="doc-page">
+  <header class="doc-header d-print-none">
+    <a class="btn btn-ghost-secondary btn-icon" href="/" aria-label="Zur Dokumentliste"><i class="ti ti-arrow-left"></i></a>
+    <input class="form-control doc-title" id="doc-title" aria-label="Dokumenttitel" maxlength="200">
+    <span class="doc-status text-secondary small" id="sync-status">Verbinde …</span>
+    <i class="ti ti-device-floppy save-icon" id="save-icon" title="Gespeichert" aria-hidden="true" hidden></i>
+    <label class="form-check form-switch m-0 autosave-switch" title="Automatisch speichern">
+      <input class="form-check-input" type="checkbox" id="autosave-toggle" checked>
+      <span class="form-check-label small d-none d-lg-inline">Automatisch speichern</span>
+    </label>
+    <button class="btn btn-sm btn-primary" id="save-btn" type="button" title="Speichern (Strg+S)" hidden>
+      <i class="ti ti-device-floppy me-1"></i>Speichern
+    </button>
+    <div class="avatar-list avatar-list-stacked ms-auto" id="presence"></div>
+    <select class="form-select mode-select" id="mode-select" aria-label="Modus" hidden>
+      <option value="edit">Bearbeiten</option>
+      <option value="suggest">Vorschlagen</option>
+    </select>
+    <span class="badge bg-orange-lt mode-badge" id="mode-badge" hidden>Vorschlagsmodus</span>
+    <button class="btn btn-ghost-secondary" id="request-edit" type="button" title="Bearbeiten beantragen" hidden>
+      <i class="ti ti-pencil-plus me-1"></i><span class="header-label">Bearbeiten beantragen</span>
+    </button>
+    <button class="btn btn-ghost-secondary" id="toggle-suggestions" type="button" title="Vorschläge" aria-pressed="false">
+      <i class="ti ti-git-pull-request me-1"></i><span class="header-label">Vorschläge</span>
+      <span class="badge bg-orange text-white ms-1" id="suggestion-count" hidden></span>
+    </button>
+    <button class="btn btn-ghost-secondary" id="toggle-comments" type="button" title="Kommentare" aria-pressed="false">
+      <i class="ti ti-message me-1"></i><span class="header-label">Kommentare</span>
+      <span class="badge bg-yellow text-white ms-1" id="comment-count" hidden></span>
+    </button>
+    <button class="btn btn-ghost-secondary" id="toggle-refs" type="button" title="Literatur" aria-pressed="false">
+      <i class="ti ti-books me-1"></i><span class="header-label">Literatur</span>
+    </button>
+    <button class="btn btn-ghost-secondary" id="export-docx" type="button" title="Word">
+      <i class="ti ti-file-type-docx me-1"></i><span class="header-label">Word</span>
+    </button>
+    <button class="btn btn-ghost-secondary btn-sm" id="lang-switch" type="button"></button>
+    <button class="btn btn-ghost-secondary btn-icon" id="print" type="button" aria-label="Drucken oder als PDF speichern">
+      <i class="ti ti-printer"></i>
+    </button>
+    <button class="btn btn-primary" id="share-btn" type="button" title="Freigeben">
+      <i class="ti ti-users me-1"></i><span class="header-label">Freigeben</span>
+      <span class="badge bg-red text-white ms-1" id="request-count" hidden></span>
+    </button>
+  </header>
+
+  <div class="toolbar d-print-none" id="toolbar" role="toolbar" aria-label="Formatierung">
+    <button type="button" data-cmd="undo" title="Rückgängig (Strg+Z)"><i class="ti ti-arrow-back-up"></i></button>
+    <button type="button" data-cmd="redo" title="Wiederholen (Strg+Y)"><i class="ti ti-arrow-forward-up"></i></button>
+    <span class="sep"></span>
+    <select id="block-type" aria-label="Absatzformat">
+      <option value="p">Text</option>
+      <option value="1">Überschrift 1</option>
+      <option value="2">Überschrift 2</option>
+      <option value="3">Überschrift 3</option>
+    </select>
+    <span class="sep"></span>
+    <button type="button" data-cmd="bold" title="Fett (Strg+B)"><i class="ti ti-bold"></i></button>
+    <button type="button" data-cmd="italic" title="Kursiv (Strg+I)"><i class="ti ti-italic"></i></button>
+    <button type="button" data-cmd="underline" title="Unterstrichen (Strg+U)"><i class="ti ti-underline"></i></button>
+    <button type="button" data-cmd="strike" title="Durchgestrichen"><i class="ti ti-strikethrough"></i></button>
+    <button type="button" data-cmd="superscript" title="Hochgestellt"><i class="ti ti-superscript"></i></button>
+    <button type="button" data-cmd="subscript" title="Tiefgestellt"><i class="ti ti-subscript"></i></button>
+    <button type="button" data-cmd="link" title="Link"><i class="ti ti-link"></i></button>
+    <span class="sep"></span>
+    <button type="button" data-cmd="bulletList" title="Aufzählung"><i class="ti ti-list"></i></button>
+    <button type="button" data-cmd="orderedList" title="Nummerierte Liste"><i class="ti ti-list-numbers"></i></button>
+    <button type="button" data-cmd="blockquote" title="Zitatblock"><i class="ti ti-quote"></i></button>
+    <span class="sep"></span>
+    <button type="button" data-cmd="left" title="Linksbündig"><i class="ti ti-align-left"></i></button>
+    <button type="button" data-cmd="center" title="Zentriert"><i class="ti ti-align-center"></i></button>
+    <button type="button" data-cmd="right" title="Rechtsbündig"><i class="ti ti-align-right"></i></button>
+    <button type="button" data-cmd="justify" title="Blocksatz"><i class="ti ti-align-justified"></i></button>
+    <span class="sep"></span>
+    <button type="button" data-cmd="table" title="Tabelle einfügen"><i class="ti ti-table"></i></button>
+    <span class="table-tools" id="table-tools" hidden>
+      <button type="button" data-cmd="addRow" title="Zeile darunter"><i class="ti ti-row-insert-bottom"></i></button>
+      <button type="button" data-cmd="addCol" title="Spalte rechts"><i class="ti ti-column-insert-right"></i></button>
+      <button type="button" data-cmd="delRow" title="Zeile löschen"><i class="ti ti-row-remove"></i></button>
+      <button type="button" data-cmd="delCol" title="Spalte löschen"><i class="ti ti-column-remove"></i></button>
+      <button type="button" data-cmd="delTable" title="Tabelle löschen"><i class="ti ti-table-off"></i></button>
+    </span>
+    <button type="button" data-cmd="image" title="Bild einfügen"><i class="ti ti-photo"></i></button>
+    <input type="file" id="image-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden>
+    <span class="table-tools" id="image-tools" hidden>
+      <button type="button" data-cmd="imageWidth" data-width="25" title="Bildbreite 25 %">25%</button>
+      <button type="button" data-cmd="imageWidth" data-width="50" title="Bildbreite 50 %">50%</button>
+      <button type="button" data-cmd="imageWidth" data-width="75" title="Bildbreite 75 %">75%</button>
+      <button type="button" data-cmd="imageWidth" data-width="100" title="Bildbreite 100 %">100%</button>
+      <button type="button" data-cmd="imageAlt" title="Bildbeschreibung (Alternativtext)"><i class="ti ti-text-caption"></i></button>
+    </span>
+    <span class="sep"></span>
+    <button type="button" class="btn-cite" data-cmd="cite" title="Literaturzitat einfügen (Strg+Shift+L)">
+      <i class="ti ti-quote"></i> Zitat
+    </button>
+    <button type="button" class="btn-cite" data-cmd="comment" title="Kommentar hinzufügen (Strg+Alt+M)">
+      <i class="ti ti-message-plus"></i> Kommentar
+    </button>
+  </div>
+
+  <div class="doc-layout">
+    <main class="sheet-scroll">
+      <article class="sheet">
+        <div id="editor"></div>
+        <section class="bibliography" id="bibliography" hidden>
+          <h2>Literatur</h2>
+          <ol id="bib-list"></ol>
+        </section>
+      </article>
+    </main>
+    <aside class="refs-panel d-print-none" id="suggestions-panel" hidden>
+      <div class="refs-head">
+        <h2 class="h3 m-0">Vorschläge</h2>
+        <button class="btn btn-ghost-secondary btn-icon btn-sm" id="close-suggestions" type="button" aria-label="Schließen"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="d-flex gap-2 mb-3" id="suggestions-bulk">
+        <button class="btn btn-sm btn-success" id="accept-all" type="button"><i class="ti ti-check me-1"></i>Alle annehmen</button>
+        <button class="btn btn-sm" id="reject-all" type="button"><i class="ti ti-x me-1"></i>Alle ablehnen</button>
+      </div>
+      <ul class="suggestion-list" id="suggestion-list"></ul>
+    </aside>
+    <aside class="refs-panel d-print-none" id="comments-panel" hidden>
+      <div class="refs-head">
+        <h2 class="h3 m-0">Kommentare</h2>
+        <button class="btn btn-ghost-secondary btn-icon btn-sm" id="close-comments" type="button" aria-label="Schließen"><i class="ti ti-x"></i></button>
+      </div>
+      <label class="form-check form-switch mb-3">
+        <input class="form-check-input" type="checkbox" id="comments-show-resolved">
+        <span class="form-check-label small">Erledigte anzeigen</span>
+      </label>
+      <ul class="comment-list" id="comment-list"></ul>
+    </aside>
+    <aside class="refs-panel d-print-none" id="refs-panel" hidden>
+      <div class="refs-head">
+        <h2 class="h3 m-0">Literatur dieses Dokuments</h2>
+        <button class="btn btn-ghost-secondary btn-icon btn-sm" id="close-refs" type="button" aria-label="Schließen"><i class="ti ti-x"></i></button>
+      </div>
+      <form class="refs-add" id="refs-add">
+        <input class="form-control" name="q" placeholder="DOI oder PMID" aria-label="DOI oder PMID" required>
+        <button class="btn btn-primary" type="submit">Hinzufügen</button>
+      </form>
+      <p class="text-secondary small">Die Liste gehört zu diesem Dokument; alle mit Zugriff sehen sie. Zitate nummerieren sich nach Reihenfolge im Text.</p>
+      <ul class="refs-list" id="refs-list"></ul>
+    </aside>
+  </div>
+
+  <footer class="statusbar d-print-none" id="statusbar"><span id="word-count"></span></footer>
+
+  <dialog class="cite-dialog" id="share-dialog" aria-labelledby="share-title">
+    <form method="dialog">
+      <h2 class="h3" id="share-title">Freigeben</h2>
+      <p class="text-secondary small mb-2">Wer darf dieses Dokument sehen? <strong>Bearbeiten</strong> ändert direkt und
+        nimmt Vorschläge an. <strong>Vorschlagen</strong> darf nur Änderungen vorschlagen.</p>
+      <div class="request-section" id="request-section" hidden>
+        <h3 class="h4 mb-1">Anträge</h3>
+        <ul class="member-list" id="request-list"></ul>
+      </div>
+      <ul class="member-list" id="member-list"></ul>
+      <div class="share-add" id="share-add">
+        <select class="form-select" id="share-user" aria-label="Person"></select>
+        <select class="form-select" id="share-role" aria-label="Rolle">
+          <option value="editor">Bearbeiten</option>
+          <option value="suggester">Vorschlagen</option>
+        </select>
+        <button class="btn btn-primary" id="share-add-btn" type="button">Hinzufügen</button>
+      </div>
+      <div class="text-danger small mt-2" id="share-error" role="alert"></div>
+      <div class="d-flex justify-content-end mt-3">
+        <button class="btn" value="close" type="submit">Schließen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="cite-dialog" id="cite-dialog" aria-labelledby="cite-title">
+    <form method="dialog" id="cite-form">
+      <h2 class="h3" id="cite-title">Zitat einfügen</h2>
+      <div class="d-flex gap-2 mb-2">
+        <input class="form-control" id="cite-lookup" placeholder="Neue Quelle: DOI oder PMID" aria-label="DOI oder PMID">
+        <button class="btn" id="cite-lookup-btn" type="button">Suchen</button>
+      </div>
+      <div class="text-danger small mb-2" id="cite-error" role="alert"></div>
+      <input class="form-control mb-2" id="cite-filter" type="search" placeholder="In der Literaturliste suchen …" aria-label="Literaturliste filtern">
+      <ul class="cite-options" id="cite-options"></ul>
+      <div class="d-flex justify-content-end gap-2 mt-3">
+        <button class="btn" value="cancel" type="submit">Abbrechen</button>
+        <button class="btn btn-primary" value="ok" type="submit" id="cite-insert">Einfügen</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
