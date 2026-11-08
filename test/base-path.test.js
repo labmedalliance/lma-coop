@@ -36,6 +36,12 @@ test('redirects point below the base path', async () => {
   assert.equal((await get('/favicon.ico')).headers.get('location'), '/write/img/favicon-32.png');
 });
 
+test('pages of the same origin may frame the app (start page with iframes)', async () => {
+  const res = await fetch(`${base}/login`);
+  assert.equal(res.headers.get('x-frame-options'), 'SAMEORIGIN');
+  assert.match(res.headers.get('content-security-policy'), /frame-ancestors 'self'/);
+});
+
 test('session cookie is limited to the base path', async () => {
   const res = await fetch(`${base}/api/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
