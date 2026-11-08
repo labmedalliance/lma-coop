@@ -3,6 +3,7 @@
 // Collaborative document page: TipTap editor synced via Hocuspocus, toolbar, citations, export.
 import { api, toast, colorFor, initials } from './base.js';
 import { t, locale } from './i18n.js';
+import { url } from './paths.js';
 import './editor.css';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
@@ -68,7 +69,7 @@ let autosave = true;
 try { autosave = localStorage.getItem(autosaveKey) !== 'off'; } catch { /* storage blocked: keep default */ }
 
 const provider = new HocuspocusProvider({
-  url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/collab`,
+  url: `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}${url('/collab')}`,
   name: docId,
   document: sharedDoc,
   token: 'cookie', // The server authenticates via the session cookie.

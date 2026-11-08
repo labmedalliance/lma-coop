@@ -128,7 +128,8 @@ serverseitige Vorschlagsprüfung, Kommentare und ihre Rechte).
 
 ## Konfiguration
 
-Umgebungsvariablen, keine davon ist ein Secret:
+Umgebungsvariablen, keine davon ist ein Secret. `npm start` und `npm run build` lesen sie auch aus einer Datei `.env`
+im Projektordner:
 
 | Variable | Standard | Zweck |
 |---|---|---|
@@ -137,6 +138,7 @@ Umgebungsvariablen, keine davon ist ein Secret:
 | `DATA_DIR` | `./data` | Ort der SQLite-Datei `docs.sqlite` |
 | `COOKIE_SECURE` | – | `1` hinter HTTPS: Cookie nur über HTTPS, HSTS an |
 | `TRUST_PROXY` | – | Hinter Reverse Proxy `loopback` setzen, sonst gilt die Login-Sperre für alle gemeinsam |
+| `BASE_PATH` | – | Pfad, unter dem die App läuft, z. B. `/write/`. Gilt für Build und Server, siehe unten |
 
 ## Betrieb
 
@@ -147,6 +149,14 @@ LMA Coop braucht nur Node.js ≥ 22.13 und läuft als ein einziger Prozess. So b
 3. `npm start` dauerhaft laufen lassen, z. B. mit systemd oder supervisord.
 4. Einen Reverse Proxy mit HTTPS davorschalten. Er muss WebSockets auf `/collab` weiterleiten.
 5. Dahinter `COOKIE_SECURE=1` und `TRUST_PROXY=loopback` setzen.
+
+Unter einem Pfad statt einer eigenen Domain, z. B. `https://example.org/write/`:
+
+- `BASE_PATH=/write/` in `.env` eintragen, bevor du `npm run build` ausführst. Nach einer Änderung neu bauen.
+- Der Proxy entfernt das Präfix, bevor er weiterleitet: Aus `/write/api/me` wird `/api/me`, auch für `/write/collab`.
+- Das Sitzungs-Cookie gilt nur für diesen Pfad. Andere Apps auf derselben Domain sehen es nicht.
+- Bilder speichert das Dokument ohne Präfix. Dokumente funktionieren deshalb auch nach einem Umzug auf einen
+  anderen Pfad.
 
 Update: `git pull && npm ci && npm run build`, dann den Prozess neu starten.
 

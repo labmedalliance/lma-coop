@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Janne Cadamuro / LabMed Alliance Inc. — see LICENSE and NOTICE
 import { api, logout, toast } from './base.js';
 import { t, locale } from './i18n.js';
+import { url } from './paths.js';
 
 const grid = document.getElementById('doc-grid');
 const empty = document.getElementById('empty-state');
@@ -19,7 +20,7 @@ function render() {
     const card = document.createElement('div');
     card.className = 'card card-link doc-card';
     const link = document.createElement('a');
-    link.href = `/d/${d.id}`;
+    link.href = url(`/d/${d.id}`);
     link.className = 'card-body text-reset text-decoration-none';
     const title = document.createElement('div');
     title.className = 'fw-bold mb-1 text-truncate';
@@ -64,7 +65,7 @@ function renderOthers(q) {
     const card = document.createElement('div');
     card.className = 'card card-link doc-card doc-card-locked';
     const link = document.createElement('a');
-    link.href = `/d/${d.id}`;
+    link.href = url(`/d/${d.id}`);
     link.className = 'card-body text-reset text-decoration-none';
     const title = document.createElement('div');
     title.className = 'fw-bold mb-1 text-truncate';
@@ -103,7 +104,7 @@ async function remove(doc) {
 
 document.getElementById('new-doc-btn').addEventListener('click', async () => {
   const { id } = await api('/api/docs', { method: 'POST', body: { title: t('Unbenanntes Dokument') } });
-  window.location.href = `/d/${id}`;
+  window.location.href = url(`/d/${id}`);
 });
 document.getElementById('logout-btn').addEventListener('click', logout);
 filter.addEventListener('input', render);

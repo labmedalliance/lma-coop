@@ -5,7 +5,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
-    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "start": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/index.js",
     "adduser": "node --disable-warning=ExperimentalWarning scripts/adduser.js",
     "test": "node --test test/*.test.js"
   },
