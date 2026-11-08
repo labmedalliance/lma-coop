@@ -76,13 +76,14 @@ if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY);
 app.use(express.json({ limit: '100kb' }));
 
 app.use((req, res, next) => {
+  // Framing only by pages of the same origin, e.g. a start page that opens the app in an iframe.
   res.set({
     'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
+    'X-Frame-Options': 'SAMEORIGIN',
     'Referrer-Policy': 'same-origin',
     'Content-Security-Policy':
       "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'; "
-      + "font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+      + "font-src 'self' data:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
   });
   if (COOKIE_SECURE) res.set('Strict-Transport-Security', 'max-age=31536000');
   req.user = userFromCookieHeader(req.headers.cookie);
