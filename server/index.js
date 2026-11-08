@@ -24,6 +24,11 @@ const PORT = Number(process.env.PORT || 5200);
 const HOST = process.env.HOST || '127.0.0.1';
 const COOKIE_SECURE = process.env.COOKIE_SECURE === '1';
 const DIST = path.resolve(import.meta.dirname, '..', 'dist');
+// Public path below which the proxy serves the app, e.g. "/write" (empty at the root). The proxy removes the
+// prefix, so routes stay the same; only redirects and the cookie path need it. Must match the build (vite.config.js).
+const BASE = (process.env.BASE_PATH || '').replace(/^\/+|\/+$/g, '').replace(/^(?=.)/, '/');
+const COOKIE_PATH = BASE || '/';
+const to = (route) => (BASE && route === '/' ? `${BASE}/` : BASE + route);
 
 // Close reason for a rejected change from a "suggest only" connection; the client reloads.
 const SUGGESTION_ONLY = 'suggestion-only';
@@ -109,7 +114,7 @@ app.post('/api/login', (req, res) => {
   clearFailures(ip);
   const { token, maxAge } = createSession(row.id);
   res.cookie(SESSION_COOKIE, token, {
-    httpOnly: true, sameSite: 'lax', secure: COOKIE_SECURE, maxAge: maxAge * 1000, path: '/',
+    httpOnly: true, sameSite: 'lax', secure: COOKIE_SECURE, maxAge: maxAge * 1000, path: COOKIE_PATH,
   });
   res.json({ ok: true });
 });
@@ -117,7 +122,7 @@ app.post('/api/login', (req, res) => {
 app.post('/api/logout', (req, res) => {
   const token = sessionToken(req.headers.cookie);
   if (token) deleteSession(token);
-  res.clearCookie(SESSION_COOKIE, { path: '/' });
+  res.clearCookie(SESSION_COOKIE, { path: COOKIE_PATH });
   res.json({ ok: true });
 });
 
@@ -167,13 +172,13 @@ app.get('/api/cite', requireUser, async (req, res) => {
 
 const page = (file) => (req, res) => res.sendFile(path.join(DIST, file));
 app.get('/login', page('login.html'));
-app.get('/', (req, res, next) => (req.user ? next() : res.redirect('/login')), page('index.html'));
-app.get('/d/:id', (req, res, next) => (req.user ? next() : res.redirect('/login')), page('doc.html'));
-app.get('/admin', (req, res, next) => (req.user?.isAdmin ? next() : res.redirect('/')), page('admin.html'));
+app.get('/', (req, res, next) => (req.user ? next() : res.redirect(to('/login'))), page('index.html'));
+app.get('/d/:id', (req, res, next) => (req.user ? next() : res.redirect(to('/login'))), page('doc.html'));
+app.get('/admin', (req, res, next) => (req.user?.isAdmin ? next() : res.redirect(to('/'))), page('admin.html'));
 // Public: licence and source offer must be reachable without an account (NOTICE term 1(b), AGPL section 13).
 app.get('/about', page('about.html'));
 app.get('/manifest.json', page('manifest.json'));
-app.get('/favicon.ico', (req, res) => res.redirect(301, '/img/favicon-32.png'));
+app.get('/favicon.ico', (req, res) => res.redirect(301, to('/img/favicon-32.png')));
 app.use('/img', express.static(path.join(DIST, 'img'), { maxAge: '1d' }));
 app.use('/assets', express.static(path.join(DIST, 'assets'), { immutable: true, maxAge: '1y' }));
 

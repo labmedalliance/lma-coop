@@ -6,6 +6,7 @@ import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import './app.css';
 import { lang, setLang, t, translatePage } from './i18n.js';
 import * as app from './attribution.js';
+import { url } from './paths.js';
 
 translatePage();
 mountCredit();
@@ -21,14 +22,14 @@ if (langSwitch) {
 }
 
 /** fetch() wrapper for the JSON API; sends the user to the login page on 401. */
-export async function api(url, options = {}) {
-  const res = await fetch(url, {
+export async function api(path, options = {}) {
+  const res = await fetch(url(path), {
     ...options,
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   if (res.status === 401) {
-    window.location.href = '/login';
+    window.location.href = url('/login');
     throw new Error(t('Nicht angemeldet'));
   }
   const data = await res.json().catch(() => ({}));
@@ -38,7 +39,7 @@ export async function api(url, options = {}) {
 
 export async function logout() {
   await api('/api/logout', { method: 'POST' });
-  window.location.href = '/login';
+  window.location.href = url('/login');
 }
 
 /** Shows a toast at the bottom; an optional action button (e.g. "Undo") runs onAction. */
@@ -90,7 +91,7 @@ function mountCredit() {
   const lma = link(app.ORGANIZATION_URL, '', 'lma-credit');
   lma.rel = 'noopener';
   const logo = document.createElement('img');
-  logo.src = app.LOGO_URL;
+  logo.src = url(app.LOGO_URL);
   logo.alt = '';
   logo.width = 16;
   logo.height = 16;
@@ -99,7 +100,7 @@ function mountCredit() {
   label.textContent = `${t('Powered by')} ${app.ORGANIZATION_SHORT}`;
   lma.append(logo, label);
   credit.append(
-    lma, ' · ', link('/about', t('Über LMA Coop')), ' · ', link('/about', `${t('Open Source')}, ${app.LICENSE_SPDX}`),
+    lma, ' · ', link(url('/about'), t('Über LMA Coop')), ' · ', link(url('/about'), `${t('Open Source')}, ${app.LICENSE_SPDX}`),
   );
 
   const statusbar = document.getElementById('statusbar');

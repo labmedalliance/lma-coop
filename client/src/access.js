@@ -3,6 +3,7 @@
 // Access requests from the requester's side: the "no access" screen and "Bearbeiten beantragen" for suggesters.
 import { api, toast } from './base.js';
 import { t } from './i18n.js';
+import { url } from './paths.js';
 
 const $ = (id) => document.getElementById(id);
 const ROLE_LABELS = { editor: t('Bearbeiten'), suggester: t('Vorschlagen') };
@@ -104,7 +105,7 @@ function actionsOf(...nodes) {
 
 function backLink(extra = 'btn-primary') {
   const a = el('a', `btn ${extra}`, t('Zur Dokumentliste'));
-  a.href = '/';
+  a.href = url('/');
   return a;
 }
 

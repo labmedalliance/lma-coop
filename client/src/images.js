@@ -6,6 +6,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin } from '@tiptap/pm/state';
 import { toast } from './base.js';
 import { t } from './i18n.js';
+import { url } from './paths.js';
 
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -16,7 +17,7 @@ const imageFiles = (list) => [...(list || [])].filter((f) => f.type.startsWith('
 export async function uploadImage(docId, file) {
   if (!IMAGE_TYPES.includes(file.type)) throw new Error(t('Nur PNG, JPEG, GIF oder WebP möglich'));
   if (file.size > MAX_BYTES) throw new Error(t('Bild ist zu groß (höchstens 10 MB)'));
-  const res = await fetch(`/api/docs/${docId}/images`, { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
+  const res = await fetch(url(`/api/docs/${docId}/images`), { method: 'POST', headers: { 'Content-Type': file.type }, body: file });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ? t(data.error) : `${t('Fehler')} ${res.status}`);
   return data.src;

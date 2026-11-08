@@ -8,6 +8,7 @@ import {
 } from 'docx';
 import { citationLabel, formatReference } from './citations.js';
 import { t } from './i18n.js';
+import { url } from './paths.js';
 
 const HEADINGS = { 1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3 };
 const ALIGN = { center: AlignmentType.CENTER, right: AlignmentType.RIGHT, justify: AlignmentType.JUSTIFIED };
@@ -40,7 +41,7 @@ async function loadImages(content) {
   images = new Map();
   await Promise.all([...srcs].map(async (src) => {
     try {
-      const res = await fetch(src);
+      const res = await fetch(url(src));
       if (!res.ok) return;
       let blob = await res.blob();
       const bitmap = await createImageBitmap(blob);
