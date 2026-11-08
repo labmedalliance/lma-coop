@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <title>Über LMA Coop</title>
+  <script type="module" src="./src/about.js"></script>
+</head>
+<body>
+  <div class="page">
+    <header class="navbar navbar-expand-md d-print-none sticky-top">
+      <div class="container-xl">
+        <a class="navbar-brand text-reset text-decoration-none" href="/"><img src="/img/lma-logo-mark.svg" alt="" class="brand-logo" width="28" height="28">LMA Coop</a>
+        <div class="navbar-nav flex-row order-md-last align-items-center gap-2">
+          <a class="btn btn-ghost-secondary" href="/"><i class="ti ti-files me-1"></i>Dokumente</a>
+          <button class="btn btn-ghost-secondary" id="lang-switch" type="button"></button>
+        </div>
+      </div>
+    </header>
+    <div class="page-wrapper">
+      <div class="container-xl py-4">
+        <!-- Required by NOTICE (AGPL section 7(b)) and the section 13 source offer - keep it reachable. -->
+        <div class="about-page">
+          <a class="d-inline-block mb-3" id="about-org-logo" rel="noopener">
+            <img src="/img/lma-logo-mark.svg" alt="LabMed Alliance" width="64" height="64">
+          </a>
+          <h1 class="page-title mb-2" id="about-name"></h1>
+          <p>Ein frei verfügbarer Editor, um Publikationen gemeinsam zu schreiben. Entwickelt von
+            <span id="about-author"></span></p>
+          <p id="about-copyright"></p>
+
+          <h2 class="h3">Lizenz</h2>
+          <p><a id="about-license" rel="noopener"></a></p>
+          <p>Du darfst LMA Coop nutzen, verändern und weitergeben – auch kommerziell. Veränderte Versionen musst du
+            unter derselben Lizenz veröffentlichen, auch wenn du sie nur als Webdienst betreibst. Der Hinweis
+            „Powered by LabMed Alliance" und diese Seite müssen erhalten bleiben (siehe NOTICE).</p>
+          <p class="text-secondary">Ohne jede Gewährleistung.</p>
+
+          <h2 class="h3">Quellcode</h2>
+          <p>Den Quellcode dieser Version findest du hier: <a id="about-source" rel="noopener"></a></p>
+
+          <h2 class="h3">Verwendete Software</h2>
+          <p>Express, Hocuspocus, Yjs, TipTap, ProseMirror, prosemirror-suggest-changes, docx, Tabler und Tabler Icons,
+            jeweils unter der MIT-Lizenz.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,130 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+ * Copyright (C) 2026 Janne Cadamuro / LabMed Alliance Inc. — see LICENSE and NOTICE */
+/* Shared app styles on top of Tabler. */
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.doc-grid > .doc-card {
+  position: relative;
+  margin: 0; /* Tabler adds a left margin to sibling .card-link elements. */
+}
+
+.doc-card .card-body {
+  padding-right: 3rem;
+}
+
+.doc-delete {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.doc-card:hover .doc-delete,
+.doc-delete:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .doc-delete { opacity: 1; }
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.app-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #fff;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
+  animation: toast-in 160ms ease-out;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) scale(0.95); }
+  to { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+@media print {
+  .app-toast { display: none; }
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .admin-grid { grid-template-columns: 1fr; }
+}
+
+.doc-card-locked {
+  background: #f8fafc;
+}
+
+/* Mandatory LabMed Alliance credit (see NOTICE) — keep it visible. */
+.app-footer {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+}
+
+.app-credit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.app-credit a {
+  color: inherit;
+}
+
+.lma-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+}
+
+.lma-credit:hover span {
+  text-decoration: underline;
+}
+
+.lma-logo {
+  width: 16px;
+  height: 16px;
+}
+
+.brand-logo {
+  width: 28px;
+  height: 28px;
+  margin-right: 0.5rem;
+}
+
+.about-page {
+  max-width: 640px;
+}
+
+.about-page h2 {
+  margin-top: 1.5rem;
+}

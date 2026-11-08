@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <title>Benutzerverwaltung – LMA Coop</title>
+  <script type="module" src="./src/admin.js"></script>
+</head>
+<body>
+  <div class="page">
+    <header class="navbar navbar-expand-md d-print-none sticky-top">
+      <div class="container-xl">
+        <a class="navbar-brand text-reset text-decoration-none" href="/"><img src="/img/lma-logo-mark.svg" alt="" class="brand-logo" width="28" height="28">LMA Coop</a>
+        <div class="navbar-nav flex-row order-md-last align-items-center gap-2">
+          <a class="btn btn-ghost-secondary" href="/"><i class="ti ti-files me-1"></i>Dokumente</a>
+          <button class="btn btn-ghost-secondary" id="lang-switch" type="button"></button>
+        </div>
+      </div>
+    </header>
+    <div class="page-wrapper">
+      <div class="container-xl py-4">
+        <h1 class="page-title mb-3">Benutzerverwaltung</h1>
+        <div class="admin-grid">
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table table-vcenter card-table">
+                <thead>
+                  <tr><th>Name</th><th>Benutzername</th><th>Admin</th><th>Dokumente</th><th class="w-1"></th></tr>
+                </thead>
+                <tbody id="user-rows"></tbody>
+              </table>
+            </div>
+          </div>
+          <form class="card" id="new-user-form" autocomplete="off">
+            <div class="card-header"><h2 class="card-title">Neue Person</h2></div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label" for="nu-name">Anzeigename</label>
+                <input class="form-control" id="nu-name" name="name" required maxlength="100">
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="nu-username">Benutzername</label>
+                <input class="form-control" id="nu-username" name="username" required pattern="[a-zA-Z0-9._\-]{2,40}"
+                  autocapitalize="none" spellcheck="false">
+                <small class="form-hint">2–40 Zeichen: Buchstaben, Ziffern, Punkt, Binde- und Unterstrich.</small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="nu-password">Start-Passwort</label>
+                <input class="form-control" id="nu-password" name="password" type="password" required minlength="10"
+                  autocomplete="new-password">
+                <small class="form-hint">Mindestens 10 Zeichen. Gib es der Person auf sicherem Weg weiter.</small>
+              </div>
+              <label class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="isAdmin">
+                <span class="form-check-label">Admin (darf Benutzer verwalten)</span>
+              </label>
+              <div class="alert alert-danger d-none" id="new-user-error" role="alert"></div>
+              <button class="btn btn-primary w-100" type="submit">Anlegen</button>
+            </div>
+          </form>
+        </div>
+        <p class="text-secondary small mt-3">Admins verwalten Konten und Rollen. Dokumente sehen sie nur, wenn sie
+          ihnen gehören oder freigegeben wurden. Beim Löschen einer Person gehen ihre Dokumente an dich über.</p>
+      </div>
+    </div>
+  </div>
+
+  <dialog class="cite-dialog" id="pw-dialog" aria-labelledby="pw-title">
+    <form method="dialog" id="pw-form">
+      <h2 class="h3" id="pw-title">Passwort zurücksetzen</h2>
+      <p class="text-secondary small" id="pw-who"></p>
+      <input class="form-control mb-2" id="pw-input" type="password" minlength="10" autocomplete="new-password"
+        aria-label="Neues Passwort" placeholder="Neues Passwort (min. 10 Zeichen)">
+      <div class="text-danger small mb-2" id="pw-error" role="alert"></div>
+      <div class="d-flex justify-content-end gap-2">
+        <button class="btn" value="cancel" type="submit" formnovalidate>Abbrechen</button>
+        <button class="btn btn-primary" value="ok" type="submit">Speichern</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>
