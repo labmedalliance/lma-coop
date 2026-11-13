@@ -3,6 +3,7 @@
 // User and role administration page.
 import { api, toast } from './base.js';
 import { t } from './i18n.js';
+import { tagBadge } from './tags.js';
 
 const $ = (id) => document.getElementById(id);
 const me = await api('/api/me');
@@ -249,4 +250,67 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
+// --- Tags -------------------------------------------------------------------
+
+async function loadTags() {
+  const tags = await api('/api/admin/tags');
+  $('tags-empty').hidden = tags.length > 0;
+  $('tag-rows').replaceChildren(...tags.map((tag) => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item tag-row';
+    const preview = tagBadge(tag.name);
+    const name = document.createElement('input');
+    name.className = 'form-control form-control-sm';
+    name.value = tag.name;
+    name.maxLength = 40;
+    name.setAttribute('aria-label', t('Tag „{name}" umbenennen', { name: tag.name }));
+    name.addEventListener('keydown', (e) => { if (e.key === 'Enter') name.blur(); });
+    name.addEventListener('change', async () => {
+      try {
+        await api(`/api/admin/tags/${tag.id}`, { method: 'PATCH', body: { name: name.value } });
+        toast(t('Tag umbenannt'));
+      } catch (err) {
+        toast(err.message);
+      }
+      loadTags();
+    });
+    const docs = document.createElement('span');
+    docs.className = 'text-secondary small text-nowrap';
+    docs.textContent = tag.docs === 1 ? t('1 Dokument') : t('{n} Dokumente', { n: tag.docs });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn btn-ghost-danger btn-icon';
+    del.setAttribute('aria-label', t('Tag „{name}" löschen', { name: tag.name }));
+    del.innerHTML = '<i class="ti ti-trash"></i>';
+    del.addEventListener('click', () => removeTag(tag));
+    li.append(preview, name, docs, del);
+    return li;
+  }));
+}
+
+// Deleting removes the tag from every document, so it asks first when documents carry it.
+async function removeTag(tag) {
+  if (tag.docs && !window.confirm(t('Tag „{name}" löschen? Er verschwindet aus {n} Dokument(en).', { name: tag.name, n: tag.docs }))) return;
+  try {
+    await api(`/api/admin/tags/${tag.id}`, { method: 'DELETE' });
+    toast(t('Tag „{name}" gelöscht', { name: tag.name }));
+  } catch (err) {
+    toast(err.message);
+  }
+  loadTags();
+}
+
+$('new-tag-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    const { name } = await api('/api/admin/tags', { method: 'POST', body: { name: $('new-tag-name').value } });
+    $('new-tag-name').value = '';
+    toast(t('Tag „{name}" angelegt', { name }));
+    loadTags();
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
 load();
+loadTags();

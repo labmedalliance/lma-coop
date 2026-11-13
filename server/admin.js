@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Janne Cadamuro / LabMed Alliance Inc. — see LICENSE and NOTICE
-// User and role administration (admins only): accounts, account permissions and document access per person.
+// Administration (admins only): accounts, account permissions, document access per person and the tag list.
 import { Router } from 'express';
 import { db } from './db.js';
 import { hashPassword, deleteUserSessions, MIN_PASSWORD_LENGTH, USERNAME_RE } from './auth.js';
-import { ROLES } from './docs.js';
+import { ROLES, allTags, cleanTagName } from './docs.js';
 
 // Account permissions: request field → column.
 const PERMISSIONS = { canCreate: 'can_create', canRequest: 'can_request', seeOthers: 'see_others' };
@@ -120,6 +120,38 @@ export function adminRouter({ onUsersChanged, onRequestsChange = () => {} }) {
     if (!r.changes) return res.status(404).json({ error: 'Nicht gefunden' });
     onUsersChanged({ userId: id });
     res.json({ ok: true, movedDocs: moved });
+  });
+
+  // --- Tags -------------------------------------------------------------------
+
+  const TAG_NAME_ERROR = 'Tag: 1–40 Zeichen';
+  const TAG_EXISTS = 'Diesen Tag gibt es schon';
+  const tagNameTaken = (name, exceptId = 0) => !!db.prepare('SELECT 1 FROM tags WHERE name = ? AND id != ?').get(name, exceptId);
+
+  router.get('/tags', (req, res) => res.json(allTags()));
+
+  router.post('/tags', (req, res) => {
+    const name = cleanTagName(req.body?.name);
+    if (!name) return res.status(400).json({ error: TAG_NAME_ERROR });
+    if (tagNameTaken(name)) return res.status(409).json({ error: TAG_EXISTS });
+    const { lastInsertRowid } = db.prepare('INSERT INTO tags (name) VALUES (?)').run(name);
+    res.status(201).json({ id: Number(lastInsertRowid), name, docs: 0 });
+  });
+
+  // Renaming changes the tag on every document that carries it.
+  router.patch('/tags/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const name = cleanTagName(req.body?.name);
+    if (!name) return res.status(400).json({ error: TAG_NAME_ERROR });
+    if (tagNameTaken(name, id)) return res.status(409).json({ error: TAG_EXISTS });
+    const r = db.prepare('UPDATE tags SET name = ? WHERE id = ?').run(name, id);
+    return r.changes ? res.json({ ok: true }) : res.status(404).json({ error: 'Nicht gefunden' });
+  });
+
+  // Deleting removes the tag from all documents (ON DELETE CASCADE).
+  router.delete('/tags/:id', (req, res) => {
+    const r = db.prepare('DELETE FROM tags WHERE id = ?').run(Number(req.params.id));
+    return r.changes ? res.json({ ok: true }) : res.status(404).json({ error: 'Nicht gefunden' });
   });
 
   return router;

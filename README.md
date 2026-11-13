@@ -36,12 +36,11 @@ Zusatzfunktion für Publikationen: eine **Literaturliste pro Dokument**. Du füg
 - Status pro Dokument: **Idee**, **Work in Progress**, **Finished**, **Archived**. Eigentümer:in und „Bearbeiten"
   setzen ihn im Dokumentkopf. Die Dokumentliste zeigt ihn als Abzeichen und filtert danach; archivierte Dokumente
   blendet sie standardmäßig aus. Neue Dokumente starten als „Idee"
-- Tags pro Dokument, zum Beispiel „Review" oder „Präanalytik", höchstens 20 je Dokument mit je höchstens 40 Zeichen.
-  Eigentümer:in und „Bearbeiten" vergeben sie über den Knopf **Tags** im Dokumentkopf: einen neuen Namen eintippen
-  oder einen vorhandenen Tag anklicken. Alle Konten teilen eine gemeinsame Tag-Liste; ein Tag verschwindet, sobald
-  kein Dokument ihn mehr trägt. Die Dokumentliste zeigt die Tags auf jeder Karte, filtert über **Alle Tags** und
-  findet Dokumente auch über die Suche nach einem Tag. Vorschläge zeigen nur Tags von Dokumenten, deren Titel du
-  sehen darfst
+- Tags pro Dokument, zum Beispiel „Review" oder „Präanalytik", höchstens 20 je Dokument. Die Tag-Liste ist für alle
+  Konten gleich. Nur Admins legen Tags an, benennen sie um oder löschen sie: auf der Seite **Benutzer** unter **Tags**
+  oder direkt im Tag-Dialog eines Dokuments. Umbenennen und Löschen wirken auf alle Dokumente. Eigentümer:in und
+  „Bearbeiten" wählen über den Knopf **Tags** im Dokumentkopf Tags aus der Liste. Die Dokumentliste zeigt die Tags auf
+  jeder Karte, filtert über **Alle Tags** und findet Dokumente auch über die Suche nach einem Tag
 - Login mit Benutzerkonten, Dokumentliste mit Suche, Löschen nur durch die Eigentümer:in, mit Rückfrage „Bist du sicher?" und „Rückgängig"
 - Freigabe pro Dokument mit Rollen, Vorschlagsmodus (Änderungen nachverfolgen), Benutzerverwaltung für Admins
 - Kommentare wie in Google Docs, im Bearbeiten- und im Vorschlagsmodus (siehe unten)

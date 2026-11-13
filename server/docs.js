@@ -41,8 +41,15 @@ const withTags = (rows) => {
   return rows.map((row) => ({ ...row, tags: tags.get(row.id) ?? [] }));
 };
 
+/** Normalises one tag name (trimmed, single spaces); null if empty or too long. */
+export function cleanTagName(raw) {
+  if (typeof raw !== 'string') return null;
+  const name = raw.replace(/\s+/g, ' ').trim();
+  return name && name.length <= MAX_TAG_LENGTH ? name : null;
+}
+
 /**
- * Cleans a list of tag names: trims, collapses whitespace, drops empty and duplicate names (case-insensitive).
+ * Cleans a list of tag names: drops empty and duplicate names (case-insensitive).
  * Returns null if the input is not a list or breaks a limit.
  */
 export function cleanTags(input) {
@@ -50,10 +57,9 @@ export function cleanTags(input) {
   const seen = new Set();
   const names = [];
   for (const raw of input) {
-    if (typeof raw !== 'string') return null;
-    const name = raw.replace(/\s+/g, ' ').trim();
-    if (!name) continue;
-    if (name.length > MAX_TAG_LENGTH) return null;
+    if (typeof raw === 'string' && !raw.trim()) continue;
+    const name = cleanTagName(raw);
+    if (!name) return null;
     if (seen.has(name.toLowerCase())) continue;
     seen.add(name.toLowerCase());
     names.push(name);
@@ -61,19 +67,25 @@ export function cleanTags(input) {
   return names.length > MAX_TAGS ? null : names;
 }
 
-/** Replaces the tags of a document. New names create tags; tags no document uses any more disappear. */
+/** All tags, sorted by name, with the number of documents (not deleted) that carry each. */
+export const allTags = () => db.prepare(`
+  SELECT t.id, t.name, (SELECT COUNT(*) FROM document_tags dt JOIN documents d ON d.id = dt.doc_id
+    WHERE dt.tag_id = t.id AND d.deleted_at IS NULL) AS docs
+  FROM tags t ORDER BY t.name COLLATE NOCASE`).all();
+
+/**
+ * Replaces the tags of a document with existing tags. Returns the stored names, or null (nothing changed)
+ * if a name is not in the tag list: only admins create tags.
+ */
 function setTags(docId, names) {
+  const tagId = db.prepare('SELECT id FROM tags WHERE name = ?');
+  const ids = names.map((name) => tagId.get(name)?.id);
+  if (ids.includes(undefined)) return null;
   db.exec('BEGIN');
   try {
     db.prepare('DELETE FROM document_tags WHERE doc_id = ?').run(docId);
-    const insertTag = db.prepare('INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO NOTHING');
-    const tagId = db.prepare('SELECT id FROM tags WHERE name = ?');
     const link = db.prepare('INSERT OR IGNORE INTO document_tags (doc_id, tag_id) VALUES (?, ?)');
-    for (const name of names) {
-      insertTag.run(name);
-      link.run(docId, tagId.get(name).id);
-    }
-    db.exec('DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM document_tags)');
+    for (const id of ids) link.run(docId, id);
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
@@ -133,16 +145,8 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
       ORDER BY d.updated_at DESC`).all(req.user.id, req.user.id, req.user.id)));
   });
 
-  // Tag names for suggestions: only tags of documents whose titles the user may see.
-  router.get('/tags', (req, res) => {
-    res.json(db.prepare(`
-      SELECT DISTINCT t.name FROM tags t
-      JOIN document_tags dt ON dt.tag_id = t.id
-      JOIN documents d ON d.id = dt.doc_id AND d.deleted_at IS NULL
-      LEFT JOIN document_members m ON m.doc_id = d.id AND m.user_id = ?
-      WHERE ? OR d.owner_id = ? OR m.user_id IS NOT NULL
-      ORDER BY t.name COLLATE NOCASE`).all(req.user.id, req.user.seeOthers ? 1 : 0, req.user.id).map((r) => r.name));
-  });
+  // The shared tag list (names only), for choosing tags in a document.
+  router.get('/tags', (req, res) => res.json(allTags().map((tag) => tag.name)));
 
   router.post('/', (req, res) => {
     if (!req.user.canCreate) return res.status(403).json({ error: 'Du darfst keine neuen Dokumente anlegen' });
@@ -159,13 +163,16 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
     res.json({ ...row, tags: tagsOf(row.id), role: req.role });
   });
 
-  // Replaces all tags of the document: { tags: ["Review", "Präanalytik"] }. Returns the stored names.
+  // Replaces all tags of the document with tags from the list: { tags: ["Review", "Präanalytik"] }.
+  // Returns the stored names (spelling from the list).
   router.put('/:id/tags', access('owner', 'editor'), (req, res) => {
     const names = cleanTags(req.body?.tags);
     if (!names) {
       return res.status(400).json({ error: 'Höchstens 20 Tags mit je höchstens 40 Zeichen' });
     }
-    res.json({ tags: setTags(req.params.id, names) });
+    const tags = setTags(req.params.id, names);
+    if (!tags) return res.status(400).json({ error: 'Unbekannter Tag. Neue Tags legt ein Admin an.' });
+    res.json({ tags });
   });
 
   // Title and/or status; either field may be left out.

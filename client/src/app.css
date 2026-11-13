@@ -256,3 +256,25 @@
 .tag-suggestion {
   min-height: 32px;
 }
+
+/* Admin: tag list */
+.tags-card {
+  max-width: 640px;
+}
+
+.tag-row {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr) 6.5rem auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.tag-row > .tag-badge {
+  justify-self: start;
+}
+
+@media (max-width: 480px) {
+  .tag-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .tag-row > .tag-badge { display: none; }
+  .tag-row > span.text-secondary { display: none; }
+}
