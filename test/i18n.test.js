@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { EN, t } from '../client/src/i18n.js';
+import { FIELDS, TYPE_LABELS } from '../client/src/reference-form.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = (file) => readFileSync(path.join(root, file), 'utf8');
@@ -75,4 +76,12 @@ test('placeholders in translations match the German key', () => {
 test('t() falls back to German outside the browser and fills placeholders', () => {
   assert.equal(t('Speichern'), 'Speichern');
   assert.equal(t('{name} gelöscht', { name: 'Anna' }), 'Anna gelöscht');
+});
+
+test('labels of the manual reference form have an English translation', () => {
+  const keys = [
+    ...Object.values(TYPE_LABELS),
+    ...FIELDS.flatMap((f) => [f.label, f.hint, ...Object.values(f.labels || {})]).filter(Boolean),
+  ];
+  assert.deepEqual(keys.filter((k) => !EN[k]), []);
 });

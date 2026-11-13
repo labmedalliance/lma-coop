@@ -10,7 +10,7 @@ Selbst gehosteter Editor im Stil von Google Docs für wissenschaftliche Publikat
 dasselbe Dokument gleichzeitig und sehen die Cursor der anderen.
 
 Zusatzfunktion für Publikationen: eine **Literaturliste pro Dokument**. Du fügst Quellen per DOI oder PMID ein
-(Crossref bzw. PubMed). Zitate im Text nummerieren sich automatisch nach der Reihenfolge des ersten Auftretens
+(Crossref bzw. PubMed) oder gibst sie von Hand ein. Zitate im Text nummerieren sich automatisch nach der Reihenfolge des ersten Auftretens
 (`[1–3, 5]`). Am Ende des Dokuments entsteht das Literaturverzeichnis im Vancouver-Stil. Der Export nach Word
 (`.docx`) übernimmt Zitate und Literaturverzeichnis.
 
@@ -24,6 +24,12 @@ Zusatzfunktion für Publikationen: eine **Literaturliste pro Dokument**. Du füg
 - Formatierung: Überschriften, fett, kursiv, unterstrichen, durchgestrichen, hoch-/tiefgestellt, Links, Listen,
   Zitatblock, Ausrichtung, Tabellen
 - Literatur: DOI/PMID-Abfrage, Mehrfachzitate, automatische Nummerierung, Literaturverzeichnis
+- Quellen von Hand eingeben: **Manuell eingeben** in der Seitenleiste **Literatur** oder **Manuell** im Dialog
+  **Zitat einfügen**. Arten: Zeitschriftenartikel, Buch, Buchkapitel, Webseite, Konferenzbeitrag, Bericht,
+  Dissertation / Abschlussarbeit. Der Dialog zeigt nur die Felder der gewählten Art und eine Live-Vorschau im
+  Vancouver-Stil (NLM *Citing Medicine*). Namen stehen eine pro Zeile, als `Cadamuro J` oder `Cadamuro, Janne`;
+  Organisationen schreibst du aus. Bei Webseiten setzt der Dialog „Abgerufen am" auf heute. Der Stift neben einer
+  Quelle öffnet sie zum Bearbeiten, auch abgefragte Quellen
 - Export als `.docx`, Drucken bzw. PDF über den Browser
 - Wort- und Zeichenzählung
 - Status pro Dokument: **Idee**, **Work in Progress**, **Finished**, **Archived**. Eigentümer:in und „Bearbeiten"
@@ -51,8 +57,8 @@ Ein neues Dokument sieht nur die Person, die es anlegt. Über **Freigeben** gibt
 | Rolle | Darf |
 |---|---|
 | Eigentümer:in | alles, inkl. Freigeben und Löschen |
-| Bearbeiten | direkt ändern, umbenennen, Vorschläge annehmen oder ablehnen, Quellen entfernen |
-| Vorschlagen | nur Änderungen vorschlagen; Quellen hinzufügen, aber nicht entfernen |
+| Bearbeiten | direkt ändern, umbenennen, Vorschläge annehmen oder ablehnen, Quellen bearbeiten und entfernen |
+| Vorschlagen | nur Änderungen vorschlagen; Quellen hinzufügen, aber nicht bearbeiten oder entfernen |
 
 **Zugriff beantragen:** Die Dokumentliste zeigt unter **Weitere Dokumente** Titel und Eigentümer:in aller
 Dokumente, auf die du keinen Zugriff hast. Die Inhalte bleiben bis zur Freigabe gesperrt. Ein Klick auf so ein

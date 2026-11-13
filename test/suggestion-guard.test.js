@@ -122,6 +122,14 @@ test('allows adding but not removing references', () => {
   assert.equal(c.check(update), false);
 });
 
+test('rejects editing an existing reference', () => {
+  const c = setup();
+  let update;
+  c.client.once('update', (u) => { update = u; });
+  c.client.getMap('references').set('r1', { title: 'Changed' });
+  assert.equal(c.check(update), false);
+});
+
 test('allows comment anchors in suggestion mode, but no text change with them', () => {
   const c = setup();
   const anchor = (id) => schema.marks.comment.create({ threadId: id });

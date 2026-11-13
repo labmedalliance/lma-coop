@@ -315,6 +315,64 @@
   font-size: 0.875rem;
 }
 
+.refs-actions {
+  display: flex;
+}
+
+.ref-dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+}
+
+/* Four columns: short fields take one, mid fields two, wide fields the whole row. */
+.ref-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem 0.75rem;
+}
+
+.ref-field-mid {
+  grid-column: span 2;
+}
+
+.ref-field-wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 520px) {
+  .ref-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Preview and buttons stay visible while the fields scroll. */
+.ref-footer {
+  position: sticky;
+  bottom: -1.25rem;
+  margin: 1rem -1.25rem -1.25rem;
+  padding: 0.75rem 1.25rem 1.25rem;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ref-field .form-label {
+  margin-bottom: 0.25rem;
+}
+
+.ref-field[hidden] {
+  display: none;
+}
+
+.ref-preview {
+  padding: 0.6rem 0.75rem;
+  margin: 0;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+  max-height: 6rem;
+  overflow-y: auto;
+}
+
 .refs-num {
   font-weight: 700;
   color: #1d4ed8;
