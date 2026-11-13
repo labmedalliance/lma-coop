@@ -85,6 +85,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS comments_doc ON comments(doc_id, thread_id);
 `);
 
+// Comments imported from Word keep the Word author's name when no account has that name (user_id is then NULL).
+const commentColumns = db.prepare('PRAGMA table_info(comments)').all().map((c) => c.name);
+if (!commentColumns.includes('author_name')) db.exec('ALTER TABLE comments ADD COLUMN author_name TEXT');
+
 // Images in documents. The document stores only the URL /api/docs/<doc>/images/<id>; the bytes live here.
 db.exec(`
   CREATE TABLE IF NOT EXISTS images (

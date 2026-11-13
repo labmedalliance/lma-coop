@@ -4,9 +4,10 @@
 import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell,
   WidthType, ExternalHyperlink, LevelFormat, InsertedTextRun, DeletedTextRun,
-  CommentRangeStart, CommentRangeEnd, CommentReference, ImageRun,
+  CommentRangeStart, CommentRangeEnd, CommentReference, ImageRun, SimpleField,
 } from 'docx';
 import { citationLabel, formatReference } from './citations.js';
+import { toCsl } from './csl.js';
 import { t } from './i18n.js';
 import { url } from './paths.js';
 
@@ -23,6 +24,20 @@ function trackedRun(options, marks) {
   if (!changes.ids.has(mark.id)) changes.ids.set(mark.id, changes.ids.size + 1);
   const tracked = { ...options, id: changes.ids.get(mark.id), author: changes.author(mark.id), date: changes.date };
   return marks.insertion ? new InsertedTextRun(tracked) : new DeletedTextRun(tracked);
+}
+
+// Reference list of the exported document; set per export by exportDocx().
+let refs = new Map();
+
+/**
+ * A citation as Word field with CSL JSON (as Mendeley writes it), so the import of this tool and citation
+ * plugins can read the references back. Word shows the cached label.
+ */
+function citationField(refIds, label) {
+  const items = refIds.filter((id) => refs.has(id)).map((id) => ({ id, itemData: toCsl(refs.get(id), id) }));
+  if (!items.length) return new TextRun(label);
+  const csl = { citationID: items.map((it) => it.id).join('-'), properties: { noteIndex: 0 }, citationItems: items };
+  return new SimpleField(`ADDIN CSL_CITATION ${JSON.stringify(csl)}`, label);
 }
 
 // Images: src -> { data, type, width, height }, loaded per export by loadImages().
@@ -145,7 +160,11 @@ function inlineRuns(n, numbers) {
   if (n.type === 'hardBreak') return [new TextRun({ text: '', break: 1 })];
   // Suggested images are exported like accepted ones; Word cannot track an inserted image here.
   if (n.type === 'image') return imageRun(n);
-  if (n.type === 'citation') return [trackedRun({ text: citationLabel(n.attrs.refIds, numbers) }, marks)];
+  if (n.type === 'citation') {
+    const label = citationLabel(n.attrs.refIds, numbers);
+    if (marks.insertion || marks.deletion) return [trackedRun({ text: label }, marks)];
+    return [citationField(n.attrs.refIds, label)];
+  }
   if (n.type !== 'text') return [];
   const text = n.text.replace(/\u200B/g, ''); // zero-width spaces mark suggested paragraph breaks
   if (!text) return [];
@@ -213,6 +232,7 @@ function blocks(nodes = [], numbers, ctx = { list: null, level: 0, quote: false 
  */
 export async function exportDocx(editor, references, numbers, title, authorOf, threads = []) {
   changes = { author: authorOf, ids: new Map(), date: new Date().toISOString() };
+  refs = new Map(references.entries());
   const content = editor.getJSON().content;
   await loadImages(content);
   const comments = prepareComments(content, threads);
@@ -222,13 +242,19 @@ export async function exportDocx(editor, references, numbers, title, authorOf, t
     body.push(new Paragraph({ text: t('Literatur'), heading: HeadingLevel.HEADING_2 }));
     for (const [id, num] of cited) {
       const ref = references.get(id);
-      body.push(new Paragraph({ children: [new TextRun(`${num}. ${ref ? formatReference(ref) : t('(Quelle fehlt)')}`)] }));
+      body.push(new Paragraph({
+        style: 'Bibliography', // lets the import drop this list again
+        children: [new TextRun(`${num}. ${ref ? formatReference(ref) : t('(Quelle fehlt)')}`)],
+      }));
     }
   }
   const doc = new Document({
     title,
     comments: { children: comments },
-    styles: { default: { document: { run: { font: 'Calibri', size: 24 } } } },
+    styles: {
+      default: { document: { run: { font: 'Calibri', size: 24 } } },
+      paragraphStyles: [{ id: 'Bibliography', name: 'Bibliography', basedOn: 'Normal', next: 'Normal' }],
+    },
     numbering: {
       config: [{
         reference: 'ordered',

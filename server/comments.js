@@ -12,6 +12,7 @@ import { roleFor } from './docs.js';
 
 const MAX_BODY = 5000;
 const MAX_QUOTE = 500;
+const MAX_IMPORT = 200; // threads per import request
 const THREAD_ID = /^[A-Za-z0-9-]{8,40}$/;
 
 const findComment = (docId, id) => db.prepare('SELECT * FROM comments WHERE id = ? AND doc_id = ?').get(id, docId);
@@ -19,7 +20,7 @@ const findComment = (docId, id) => db.prepare('SELECT * FROM comments WHERE id =
 /** All threads of the document that are not deleted, each with its comments in order. */
 export function listThreads(docId) {
   const rows = db.prepare(`
-    SELECT c.id, c.thread_id, c.user_id, u.name AS author, c.body, c.quote, c.created_at, c.edited_at,
+    SELECT c.id, c.thread_id, c.user_id, COALESCE(u.name, c.author_name) AS author, c.body, c.quote, c.created_at, c.edited_at,
       c.resolved_at, r.name AS resolved_by
     FROM comments c
     LEFT JOIN users u ON u.id = c.user_id
@@ -85,6 +86,42 @@ export function commentsRouter({ onChange = () => {} } = {}) {
       VALUES (?, ?, ?, ?, ?, ?, ?)`).run(id, req.params.id, id, req.user.id, body, quote, Date.now());
     res.status(201);
     changed(req, res, { id });
+  });
+
+  // Threads from a Word file (owner and "Bearbeiten"). Each comment keeps its Word author and date; an author
+  // whose name matches an account is linked to it. Body: { threads: [{ id, quote, resolved, comments: [{ author, body, createdAt }] }] }.
+  router.post('/import', (req, res) => {
+    if (req.role === 'suggester') return res.status(403).json({ error: 'Keine Berechtigung' });
+    const threads = Array.isArray(req.body?.threads) ? req.body.threads.slice(0, MAX_IMPORT) : [];
+    const userByName = new Map(db.prepare('SELECT id, name FROM users').all().map((u) => [u.name.toLowerCase(), u.id]));
+    const insert = db.prepare(`INSERT INTO comments (id, doc_id, thread_id, user_id, author_name, body, quote, created_at, resolved_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+    const exists = db.prepare('SELECT 1 FROM comments WHERE id = ?');
+    let count = 0;
+    db.exec('BEGIN');
+    try {
+      for (const thread of threads) {
+        const id = String(thread?.id || '');
+        const comments = (Array.isArray(thread?.comments) ? thread.comments : [])
+          .map((c) => ({ ...c, body: cleanBody(c?.body) })).filter((c) => c.body);
+        if (!THREAD_ID.test(id) || !comments.length || exists.get(id)) continue;
+        const quote = String(thread.quote ?? '').slice(0, MAX_QUOTE);
+        comments.forEach((c, i) => {
+          const author = String(c.author ?? '').trim().slice(0, 200);
+          const createdAt = Number.isFinite(c.createdAt) ? c.createdAt : Date.now();
+          const resolvedAt = i === 0 && thread.resolved ? Date.now() : null;
+          insert.run(i === 0 ? id : randomUUID(), req.params.id, id, userByName.get(author.toLowerCase()) ?? null,
+            author || null, c.body, i === 0 ? quote : null, createdAt, resolvedAt);
+        });
+        count++;
+      }
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+    res.status(201);
+    changed(req, res, { count });
   });
 
   // Reply. Like Google Docs, a reply reopens a resolved thread.

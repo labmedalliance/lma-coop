@@ -4,6 +4,7 @@ import { api, logout, toast } from './base.js';
 import { t, locale } from './i18n.js';
 import { url } from './paths.js';
 import { statusBadge } from './status.js';
+import { savePendingImport } from './pending-import.js';
 
 const grid = document.getElementById('doc-grid');
 const empty = document.getElementById('empty-state');
@@ -134,6 +135,22 @@ async function remove(doc) {
 document.getElementById('new-doc-btn').addEventListener('click', async () => {
   const { id } = await api('/api/docs', { method: 'POST', body: { title: t('Unbenanntes Dokument') } });
   window.location.href = url(`/d/${id}`);
+});
+// New document from a Word file: the editor page of the new document imports it.
+const importInput = document.getElementById('import-input');
+document.getElementById('import-btn').addEventListener('click', () => importInput.click());
+importInput.addEventListener('change', async () => {
+  const [file] = importInput.files;
+  importInput.value = '';
+  if (!file) return;
+  try {
+    const title = file.name.replace(/\.docx$/i, '') || t('Unbenanntes Dokument');
+    const { id } = await api('/api/docs', { method: 'POST', body: { title } });
+    await savePendingImport(id, file);
+    window.location.href = url(`/d/${id}`);
+  } catch (err) {
+    toast(err.message);
+  }
 });
 document.getElementById('logout-btn').addEventListener('click', logout);
 filter.addEventListener('input', render);

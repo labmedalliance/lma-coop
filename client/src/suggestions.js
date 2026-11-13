@@ -193,9 +193,15 @@ export function suggestionAuthor(id) {
   return match ? Number(match[1]) : null;
 }
 
+/** Tracked changes imported from Word without a matching account keep the Word author: "w|<name>|<random>". */
+export function suggestionAuthorName(id) {
+  const match = /^w\|([^|]*)\|/.exec(String(id));
+  try { return match ? decodeURIComponent(match[1]) || null : null; } catch { return null; }
+}
+
 /**
  * Lists all suggestions in document order:
- * [{ id, authorId, inserted, deleted, modified, from }]. Zero-width spaces used for paragraph breaks are dropped.
+ * [{ id, authorId, authorName, inserted, deleted, modified, from }]. Zero-width spaces used for paragraph breaks are dropped.
  */
 export function collectSuggestions(doc) {
   const byId = new Map();
@@ -204,7 +210,7 @@ export function collectSuggestions(doc) {
       if (!(mark.type.name in SUGGESTION_MARKS)) continue;
       const id = mark.attrs.id;
       if (!byId.has(id)) {
-        byId.set(id, { id, authorId: suggestionAuthor(id), inserted: '', deleted: '', modified: false, from: pos });
+        byId.set(id, { id, authorId: suggestionAuthor(id), authorName: suggestionAuthorName(id), inserted: '', deleted: '', modified: false, from: pos });
       }
       const entry = byId.get(id);
       const text = node.type.name === 'image' ? `[${t('Bild')}]` : (node.isText ? node.text : node.textContent).replace(/​/g, '');
