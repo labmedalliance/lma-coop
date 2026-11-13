@@ -88,6 +88,21 @@ test('creates, renames, soft-deletes and restores a document', async () => {
   assert.ok(docs.some((d) => d.id === id));
 });
 
+test('sets a document status; renaming keeps it', async () => {
+  const cookie = await login();
+  const { id, status } = await (await json(cookie, '/api/docs', 'POST', {})).json();
+  assert.equal(status, 'idea', 'new documents start as idea');
+  assert.equal((await json(cookie, `/api/docs/${id}`, 'PATCH', { status: 'finished' })).status, 200);
+  assert.equal((await json(cookie, `/api/docs/${id}`, 'PATCH', { title: 'Renamed' })).status, 200);
+  const doc = await (await json(cookie, `/api/docs/${id}`)).json();
+  assert.equal(doc.status, 'finished');
+  assert.equal(doc.title, 'Renamed');
+  assert.equal((await (await json(cookie, '/api/docs')).json()).find((d) => d.id === id).status, 'finished');
+  assert.equal((await json(cookie, `/api/docs/${id}`, 'PATCH', { status: 'deleted' })).status, 400);
+  assert.equal((await json(cookie, `/api/docs/${id}`, 'PATCH', {})).status, 400);
+  assert.equal((await json(cookie, `/api/docs/${id}`, 'PATCH', { title: '  ' })).status, 400);
+});
+
 test('blocks cross-origin writes', async () => {
   const cookie = await login();
   const res = await fetch(`${base}/api/docs`, { method: 'POST', headers: { cookie, origin: 'http://evil.example' } });
@@ -132,6 +147,7 @@ test('admin manages users; documents are private until shared; suggesters may on
   const listed = (await (await json(ben, '/api/docs')).json()).find((d) => d.id === id);
   assert.equal(listed.role, 'suggester');
   assert.equal((await json(ben, `/api/docs/${id}`, 'PATCH', { title: 'Hijack' })).status, 403);
+  assert.equal((await json(ben, `/api/docs/${id}`, 'PATCH', { status: 'archived' })).status, 403, 'suggester may not set status');
   assert.equal((await json(ben, `/api/docs/${id}`, 'DELETE')).status, 403);
   // Only the owner deletes: edit rights are not enough.
   assert.equal((await json(anna, `/api/docs/${id}/members/${benId}`, 'PUT', { role: 'editor' })).status, 200);

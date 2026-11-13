@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Janne Cadamuro / LabMed Alliance Inc. — see LICENSE and NOTICE
 // Collaborative document page: TipTap editor synced via Hocuspocus, toolbar, citations, export.
 import { api, toast, colorFor, initials } from './base.js';
+import { STATUSES } from './status.js';
 import { t, locale } from './i18n.js';
 import { url } from './paths.js';
 import './editor.css';
@@ -52,6 +53,24 @@ titleInput.addEventListener('change', async () => {
   await api(`/api/docs/${docId}`, { method: 'PATCH', body: { title } });
 });
 titleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') titleInput.blur(); });
+
+// --- Status -----------------------------------------------------------------
+
+const stateSelect = $('doc-state');
+stateSelect.append(...Object.entries(STATUSES).map(([value, s]) => new Option(s.label, value)));
+stateSelect.value = meta.status;
+stateSelect.disabled = !canEdit;
+stateSelect.dataset.state = meta.status;
+stateSelect.addEventListener('change', async () => {
+  const previous = stateSelect.dataset.state;
+  try {
+    await api(`/api/docs/${docId}`, { method: 'PATCH', body: { status: stateSelect.value } });
+    stateSelect.dataset.state = stateSelect.value;
+  } catch (err) {
+    stateSelect.value = previous;
+    toast(err.message);
+  }
+});
 
 // --- Collaboration ----------------------------------------------------------
 
