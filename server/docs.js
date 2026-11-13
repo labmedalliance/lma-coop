@@ -12,6 +12,7 @@ import { db } from './db.js';
 
 export const ROLES = ['editor', 'suggester'];
 const RANK = { suggester: 1, editor: 2, owner: 3 };
+export const STATUSES = ['idea', 'wip', 'finished', 'archived'];
 
 const docExists = (docId) => !!db.prepare('SELECT 1 FROM documents WHERE id = ? AND deleted_at IS NULL').get(docId);
 const pendingRequest = (docId, userId) => db.prepare('SELECT role, created_at FROM access_requests WHERE doc_id = ? AND user_id = ?')
@@ -44,7 +45,7 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
 
   router.get('/', (req, res) => {
     const rows = db.prepare(`
-      SELECT d.id, d.title, d.updated_at, u.name AS owner,
+      SELECT d.id, d.title, d.status, d.updated_at, u.name AS owner,
         CASE WHEN d.owner_id = ? THEN 'owner' ELSE m.role END AS role,
         CASE WHEN d.owner_id = ? THEN (SELECT COUNT(*) FROM access_requests r WHERE r.doc_id = d.id) ELSE 0 END AS requests
       FROM documents d
@@ -58,7 +59,7 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
   // Documents of others without access: titles are visible to every account, contents only after sharing.
   router.get('/discover', (req, res) => {
     res.json(db.prepare(`
-      SELECT d.id, d.title, d.updated_at, u.name AS owner, r.role AS requested
+      SELECT d.id, d.title, d.status, d.updated_at, u.name AS owner, r.role AS requested
       FROM documents d
       LEFT JOIN users u ON u.id = d.owner_id
       LEFT JOIN document_members m ON m.doc_id = d.id AND m.user_id = ?
@@ -71,20 +72,27 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
     const id = randomUUID();
     const now = Date.now();
     const title = String(req.body?.title || 'Unbenanntes Dokument').slice(0, 200);
-    db.prepare('INSERT INTO documents (id, title, owner_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
+    db.prepare("INSERT INTO documents (id, title, status, owner_id, created_at, updated_at) VALUES (?, ?, 'idea', ?, ?, ?)")
       .run(id, title, req.user.id, now, now);
-    res.status(201).json({ id, title });
+    res.status(201).json({ id, title, status: 'idea' });
   });
 
   router.get('/:id', access(), (req, res) => {
-    const row = db.prepare('SELECT id, title FROM documents WHERE id = ?').get(req.params.id);
+    const row = db.prepare('SELECT id, title, status FROM documents WHERE id = ?').get(req.params.id);
     res.json({ ...row, role: req.role });
   });
 
+  // Title and/or status; either field may be left out.
   router.patch('/:id', access('owner', 'editor'), (req, res) => {
-    const title = String(req.body?.title || '').trim().slice(0, 200);
-    if (!title) return res.status(400).json({ error: 'Titel fehlt' });
-    db.prepare('UPDATE documents SET title = ? WHERE id = ?').run(title, req.params.id);
+    const body = req.body || {};
+    if (body.title === undefined && body.status === undefined) return res.status(400).json({ error: 'Titel fehlt' });
+    const title = body.title === undefined ? null : String(body.title).trim().slice(0, 200);
+    if (title === '') return res.status(400).json({ error: 'Titel fehlt' });
+    if (body.status !== undefined && !STATUSES.includes(body.status)) {
+      return res.status(400).json({ error: 'Unbekannter Status' });
+    }
+    db.prepare('UPDATE documents SET title = COALESCE(?, title), status = COALESCE(?, status) WHERE id = ?')
+      .run(title, body.status ?? null, req.params.id);
     res.json({ ok: true });
   });
 

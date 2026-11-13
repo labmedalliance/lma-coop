@@ -26,6 +26,9 @@ Zusatzfunktion für Publikationen: eine **Literaturliste pro Dokument**. Du füg
 - Literatur: DOI/PMID-Abfrage, Mehrfachzitate, automatische Nummerierung, Literaturverzeichnis
 - Export als `.docx`, Drucken bzw. PDF über den Browser
 - Wort- und Zeichenzählung
+- Status pro Dokument: **Idee**, **Work in Progress**, **Finished**, **Archived**. Eigentümer:in und „Bearbeiten"
+  setzen ihn im Dokumentkopf. Die Dokumentliste zeigt ihn als Abzeichen und filtert danach; archivierte Dokumente
+  blendet sie standardmäßig aus. Neue Dokumente starten als „Idee"
 - Login mit Benutzerkonten, Dokumentliste mit Suche, Löschen nur durch die Eigentümer:in, mit Rückfrage „Bist du sicher?" und „Rückgängig"
 - Freigabe pro Dokument mit Rollen, Vorschlagsmodus (Änderungen nachverfolgen), Benutzerverwaltung für Admins
 - Kommentare wie in Google Docs, im Bearbeiten- und im Vorschlagsmodus (siehe unten)

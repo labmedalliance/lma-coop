@@ -150,3 +150,27 @@
 .cite-dialog::backdrop {
   background: rgb(15 23 42 / 0.4);
 }
+
+/* Document status */
+.doc-state-badge {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+/* Compact like the title field: no border until hover or focus. */
+.doc-state-select {
+  width: auto;
+  flex: 0 0 auto;
+  border-color: transparent;
+  background-color: #f1f5f9;
+}
+
+.doc-state-select:hover,
+.doc-state-select:focus {
+  border-color: #cbd5e1;
+}
+
+.doc-state-select:disabled {
+  background-image: none;
+  padding-right: 0.75rem;
+}

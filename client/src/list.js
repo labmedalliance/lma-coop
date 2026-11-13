@@ -3,19 +3,28 @@
 import { api, logout, toast } from './base.js';
 import { t, locale } from './i18n.js';
 import { url } from './paths.js';
+import { statusBadge } from './status.js';
 
 const grid = document.getElementById('doc-grid');
 const empty = document.getElementById('empty-state');
 const filter = document.getElementById('filter');
+const stateFilter = document.getElementById('state-filter');
 let docs = [];
 let others = [];
 
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
 const ROLE_BADGES = { editor: [t('Bearbeiten'), 'bg-blue-lt'], suggester: [t('Vorschlagen'), 'bg-orange-lt'] };
 
+// "active" hides archived documents; "all" shows everything; otherwise exactly that status.
+function matches(d, q) {
+  const state = stateFilter.value;
+  const stateOk = state === 'all' || (state === 'active' ? d.status !== 'archived' : d.status === state);
+  return stateOk && d.title.toLowerCase().includes(q);
+}
+
 function render() {
   const q = filter.value.trim().toLowerCase();
-  const shown = docs.filter((d) => d.title.toLowerCase().includes(q));
+  const shown = docs.filter((d) => matches(d, q));
   grid.replaceChildren(...shown.map((d) => {
     const card = document.createElement('div');
     card.className = 'card card-link doc-card';
@@ -29,16 +38,18 @@ function render() {
     meta.className = 'text-secondary small';
     meta.textContent = `${d.owner || '–'} · ${dateFmt.format(d.updated_at)}`;
     link.append(title, meta);
+    const state = statusBadge(d.status);
+    if (state) link.append(state);
     if (ROLE_BADGES[d.role]) {
       const [text, cls] = ROLE_BADGES[d.role];
       const badge = document.createElement('span');
-      badge.className = `badge ${cls} d-inline-block mt-2`;
+      badge.className = `badge ${cls} d-inline-block mt-2 ms-1`;
       badge.textContent = t('Geteilt · {role}', { role: text });
       link.append(badge);
     }
     if (d.requests) {
       const badge = document.createElement('span');
-      badge.className = 'badge bg-red-lt d-inline-block mt-2';
+      badge.className = 'badge bg-red-lt d-inline-block mt-2 ms-1';
       badge.textContent = d.requests === 1 ? t('1 offener Antrag') : t('{n} offene Anträge', { n: d.requests });
       link.append(badge);
     }
@@ -54,12 +65,14 @@ function render() {
     return card;
   }));
   empty.classList.toggle('d-none', docs.length > 0);
+  const hiddenEl = document.getElementById('state-empty');
+  hiddenEl.hidden = !(docs.length > 0 && shown.length === 0);
   renderOthers(q);
 }
 
 // Documents of others: title and owner only; the card opens the access request page.
 function renderOthers(q) {
-  const shown = others.filter((d) => d.title.toLowerCase().includes(q));
+  const shown = others.filter((d) => matches(d, q));
   document.getElementById('other-section').hidden = !shown.length;
   document.getElementById('other-grid').replaceChildren(...shown.map((d) => {
     const card = document.createElement('div');
@@ -82,7 +95,8 @@ function renderOthers(q) {
       action.innerHTML = '<i class="ti ti-lock me-1"></i>';
       action.append(t('Zugriff beantragen'));
     }
-    link.append(title, meta, action);
+    const state = statusBadge(d.status);
+    link.append(title, meta, ...(state ? [state] : []), action);
     card.append(link);
     return card;
   }));
@@ -123,6 +137,14 @@ document.getElementById('new-doc-btn').addEventListener('click', async () => {
 });
 document.getElementById('logout-btn').addEventListener('click', logout);
 filter.addEventListener('input', render);
+stateFilter.addEventListener('change', () => {
+  render();
+  try { localStorage.setItem('lma-coop-state-filter', stateFilter.value); } catch { /* storage blocked */ }
+});
+try {
+  const saved = localStorage.getItem('lma-coop-state-filter');
+  if (saved && [...stateFilter.options].some((o) => o.value === saved)) stateFilter.value = saved;
+} catch { /* storage blocked */ }
 
 api('/api/me').then((me) => {
   document.getElementById('me-name').textContent = me.name;

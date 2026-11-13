@@ -15,11 +15,12 @@
   <header class="doc-header d-print-none">
     <a class="btn btn-ghost-secondary btn-icon" href="/" aria-label="Zur Dokumentliste"><i class="ti ti-arrow-left"></i></a>
     <input class="form-control doc-title" id="doc-title" aria-label="Dokumenttitel" maxlength="200">
+    <select class="form-select form-select-sm doc-state-select" id="doc-state" aria-label="Status"></select>
     <span class="doc-status text-secondary small" id="sync-status">Verbinde …</span>
     <i class="ti ti-device-floppy save-icon" id="save-icon" title="Gespeichert" aria-hidden="true" hidden></i>
     <label class="form-check form-switch m-0 autosave-switch" title="Automatisch speichern">
       <input class="form-check-input" type="checkbox" id="autosave-toggle" checked>
-      <span class="form-check-label small d-none d-lg-inline">Automatisch speichern</span>
+      <span class="form-check-label small d-none d-xxl-inline">Automatisch speichern</span>
     </label>
     <button class="btn btn-sm btn-primary" id="save-btn" type="button" title="Speichern (Strg+S)" hidden>
       <i class="ti ti-device-floppy me-1"></i>Speichern

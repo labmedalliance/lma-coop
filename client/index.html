@@ -29,9 +29,18 @@
         <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
           <h1 class="page-title me-auto">Dokumente</h1>
           <input class="form-control w-auto" id="filter" type="search" placeholder="Suchen …" aria-label="Dokumente durchsuchen">
+          <select class="form-select w-auto" id="state-filter" aria-label="Nach Status filtern">
+            <option value="active">Alle außer Archived</option>
+            <option value="all">Alle</option>
+            <option value="idea">Idee</option>
+            <option value="wip">Work in Progress</option>
+            <option value="finished">Finished</option>
+            <option value="archived">Archived</option>
+          </select>
           <button class="btn btn-primary" id="new-doc-btn" type="button"><i class="ti ti-plus me-1"></i>Neues Dokument</button>
         </div>
         <div class="doc-grid" id="doc-grid"></div>
+        <p class="text-secondary" id="state-empty" hidden>Keine Dokumente mit diesem Status.</p>
         <div class="empty d-none" id="empty-state">
           <p class="empty-title">Noch keine Dokumente</p>
           <p class="empty-subtitle text-secondary">Leg ein Dokument an und gib es über „Freigeben" für Kolleg:innen frei.</p>
