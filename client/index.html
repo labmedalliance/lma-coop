@@ -37,6 +37,8 @@
             <option value="finished">Finished</option>
             <option value="archived">Archived</option>
           </select>
+          <button class="btn" id="import-btn" type="button" title="Neues Dokument aus einer Word-Datei (.docx), mit Kommentaren, Änderungen und Zitaten"><i class="ti ti-file-import me-1"></i>Word importieren</button>
+          <input type="file" id="import-input" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
           <button class="btn btn-primary" id="new-doc-btn" type="button"><i class="ti ti-plus me-1"></i>Neues Dokument</button>
         </div>
         <div class="doc-grid" id="doc-grid"></div>

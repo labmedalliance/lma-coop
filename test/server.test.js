@@ -295,6 +295,41 @@ test('comments: every role comments, replies and resolves; only authors edit; de
   a.websocketProvider.destroy();
 });
 
+test('comments import from Word: keeps authors, dates, replies and done state; not for suggesters', async () => {
+  const anna = await login();
+  const ginaPassword = randomUUID();
+  await json(anna, '/api/admin/users', 'POST', { username: 'gina', name: 'Gina', password: ginaPassword });
+  const gina = await login('gina', ginaPassword);
+  const ginaId = (await (await json(anna, '/api/users')).json()).find((u) => u.username === 'gina').id;
+  const { id } = await (await json(anna, '/api/docs', 'POST', { title: 'Imported paper' })).json();
+  await json(anna, `/api/docs/${id}/members/${ginaId}`, 'PUT', { role: 'suggester' });
+  const url = `/api/docs/${id}/comments/import`;
+  const threadId = randomUUID();
+  const threads = [
+    { id: threadId, quote: 'Satz', resolved: true, comments: [
+      { author: 'Prof. Extern', body: 'Quelle?', createdAt: Date.parse('2026-03-01T10:00:00Z') },
+      { author: 'gina', body: 'Ergänzt.', createdAt: Date.parse('2026-03-02T10:00:00Z') },
+    ] },
+    { id: 'bad id!', comments: [{ author: 'X', body: 'skipped' }] },
+    { id: randomUUID(), comments: [{ author: 'X', body: '   ' }] },
+  ];
+  assert.equal((await json(gina, url, 'POST', { threads })).status, 403, 'suggesters cannot import');
+  const res = await json(anna, url, 'POST', { threads });
+  assert.equal(res.status, 201);
+  assert.equal((await res.json()).count, 1);
+  assert.equal((await (await json(anna, url, 'POST', { threads })).json()).count, 0, 'same ids are not imported twice');
+
+  const [thread] = await (await json(anna, `/api/docs/${id}/comments`)).json();
+  assert.equal(thread.id, threadId);
+  assert.equal(thread.quote, 'Satz');
+  assert.ok(thread.resolvedAt);
+  assert.deepEqual(thread.comments.map((c) => [c.author, c.authorId, c.body]),
+    [['Prof. Extern', null, 'Quelle?'], ['Gina', ginaId, 'Ergänzt.']], 'a matching name links the account');
+  assert.equal(thread.comments[0].createdAt, Date.parse('2026-03-01T10:00:00Z'));
+  // The linked account may edit its imported comment.
+  assert.equal((await json(gina, `/api/docs/${id}/comments/${thread.comments[1].id}`, 'PATCH', { body: 'Ergänzt!' })).status, 200);
+});
+
 test('images: members upload and load, others get 404; only real PNG/JPEG/GIF/WebP up to 10 MB', async () => {
   const anna = await login();
   const fynnPassword = randomUUID();

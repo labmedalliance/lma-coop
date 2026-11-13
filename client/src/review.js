@@ -7,7 +7,7 @@ import {
 } from '@handlewithcare/prosemirror-suggest-changes';
 import { api, toast } from './base.js';
 import { t } from './i18n.js';
-import { collectSuggestions, suggestionAuthor } from './suggestions.js';
+import { collectSuggestions, suggestionAuthor, suggestionAuthorName } from './suggestions.js';
 
 const $ = (id) => document.getElementById(id);
 const MODE_KEY = 'gdk-mode';
@@ -105,7 +105,7 @@ export function setupReview({ editor, role, docId, onModeChange }) {
       head.type = 'button';
       head.className = 'suggestion-text';
       const who = document.createElement('strong');
-      who.textContent = authors.get(s.authorId) || t('Unbekannt');
+      who.textContent = authors.get(s.authorId) || s.authorName || t('Unbekannt');
       const what = document.createElement('span');
       what.textContent = describe(s);
       head.append(who, what);
@@ -143,6 +143,6 @@ export function setupReview({ editor, role, docId, onModeChange }) {
 
   return {
     suggesting: () => isSuggestChangesEnabled(editor.state),
-    authorOf: (id) => authors.get(suggestionAuthor(id)) || t('Unbekannt'),
+    authorOf: (id) => authors.get(suggestionAuthor(id)) || suggestionAuthorName(id) || t('Unbekannt'),
   };
 }

@@ -20,9 +20,12 @@ import { setupSharing } from './share.js';
 import { showNoAccess, setupEditRequest } from './access.js';
 import { CommentHighlight, setupComments } from './comments.js';
 import { setupSelectionMenu } from './selection-menu.js';
-import { ImageUpload, insertImages } from './images.js';
+import { ImageUpload, insertImages, uploadImage } from './images.js';
 import { IMAGE_WIDTHS } from './image-node.js';
 import { setupReferenceForm } from './reference-form.js';
+import { Slice } from '@tiptap/pm/model';
+import { suggestChangesKey } from '@handlewithcare/prosemirror-suggest-changes';
+import { takePendingImport } from './pending-import.js';
 
 const docId = window.location.pathname.split('/').pop();
 const $ = (id) => document.getElementById(id);
@@ -519,6 +522,86 @@ $('export-docx').addEventListener('click', async () => {
 });
 $('print').addEventListener('click', () => window.print());
 
+// --- Word import --------------------------------------------------------------
+
+/**
+ * Imports a .docx: images go to the server, references into the reference list, comments to the server,
+ * then the content replaces an empty document or goes in at the cursor. Tracked changes arrive as
+ * suggestions, so they can be accepted or rejected here. Owners and "Bearbeiten" only.
+ */
+async function importWord(file) {
+  toast(t('Word-Datei wird importiert …'), { timeout: 2500 });
+  const { parseDocx } = await import('./import-docx.js');
+  const result = parseDocx(new Uint8Array(await file.arrayBuffer()));
+  const { stats } = result;
+  // Checked before anything is stored, so a file the editor cannot hold changes nothing.
+  editor.schema.nodeFromJSON({ type: 'doc', content: result.content }).check();
+
+  const srcs = new Map();
+  for (const image of result.images) {
+    try {
+      srcs.set(`import:${image.key}`, await uploadImage(docId, new File([image.data], image.name, { type: image.mime })));
+    } catch {
+      // Left out; counted below.
+    }
+  }
+  const refIds = new Map(result.references.map(({ key, ref }) => [key, storeReference(ref)]));
+  let images = 0;
+  const fix = (nodes) => nodes.flatMap((n) => {
+    if (n.type === 'image') {
+      if (!srcs.has(n.attrs.src)) return [];
+      images++;
+      return [{ ...n, attrs: { ...n.attrs, src: srcs.get(n.attrs.src) } }];
+    }
+    if (n.type === 'citation') return [{ ...n, attrs: { refIds: n.attrs.refIds.map((key) => refIds.get(key)) } }];
+    return [n.content ? { ...n, content: fix(n.content) } : n];
+  });
+  const content = editor.schema.nodeFromJSON({ type: 'doc', content: fix(result.content) });
+
+  // Comments in chunks, so each request stays below the server's body limit.
+  let chunk = [];
+  const sendChunk = async () => {
+    if (chunk.length) await api(`/api/docs/${docId}/comments/import`, { method: 'POST', body: { threads: chunk } });
+    chunk = [];
+  };
+  for (const thread of result.threads) {
+    chunk.push(thread);
+    if (chunk.length >= 50 || JSON.stringify(chunk).length > 60_000) await sendChunk();
+  }
+  await sendChunk();
+
+  // Inserted directly, also in suggestion mode: the Word changes already are suggestions.
+  const { state } = editor;
+  const empty = state.doc.childCount === 1 && state.doc.firstChild.content.size === 0;
+  const tr = empty
+    ? state.tr.replaceWith(0, state.doc.content.size, content.content)
+    : state.tr.replaceSelection(new Slice(content.content, 0, 0));
+  editor.view.dispatch(tr.setMeta(suggestChangesKey, { skip: true }).scrollIntoView());
+
+  if (empty && titleInput.value === t('Unbenanntes Dokument')) {
+    titleInput.value = file.name.replace(/\.docx$/i, '');
+    titleInput.dispatchEvent(new Event('change'));
+  }
+  const lost = stats.images - images;
+  toast([
+    t('Word-Datei importiert: {changes} Änderungen, {comments} Kommentare, {citations} Zitate, {images} Bilder.', {
+      changes: stats.changes, comments: stats.comments, citations: stats.citations, images,
+    }),
+    lost && t('{n} Bilder fehlen (nur PNG, JPEG, GIF und WebP möglich).', { n: lost }),
+    stats.footnotes && t('Fußnoten werden nicht übernommen ({n}).', { n: stats.footnotes }),
+  ].filter(Boolean).join(' '), { timeout: 10_000 });
+}
+
+const docxInput = $('docx-input');
+$('import-docx').hidden = !canEdit;
+$('import-docx').addEventListener('click', () => docxInput.click());
+const runImport = (file) => importWord(file).catch((err) => toast(t(err.message)));
+docxInput.addEventListener('change', () => {
+  const [file] = docxInput.files;
+  docxInput.value = '';
+  if (file) runImport(file);
+});
+
 review = setupReview({ editor, role, docId, onModeChange: updateToolbar });
 setupSharing({ docId, role, provider });
 const comments = setupComments({ editor, docId, me, canEdit, provider });
@@ -539,4 +622,12 @@ editor.on('transaction', () => { updateToolbar(); refresh(); });
 editor.on('update', updateStatusbar);
 references.observe(refresh);
 provider.on('synced', () => { refresh(); updateStatusbar(); });
+// A Word file chosen in the document list ("Word importieren") goes in once the empty document is loaded.
+if (canEdit) {
+  provider.on('synced', async function importPending() {
+    provider.off('synced', importPending);
+    const file = await takePendingImport(docId);
+    if (file) runImport(file);
+  });
+}
 updateToolbar();

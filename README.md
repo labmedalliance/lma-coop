@@ -31,6 +31,7 @@ Zusatzfunktion für Publikationen: eine **Literaturliste pro Dokument**. Du füg
   Organisationen schreibst du aus. Bei Webseiten setzt der Dialog „Abgerufen am" auf heute. Der Stift neben einer
   Quelle öffnet sie zum Bearbeiten, auch abgefragte Quellen
 - Export als `.docx`, Drucken bzw. PDF über den Browser
+- Import aus Word (`.docx`) mit Kommentaren, Änderungsverfolgung und Zitaten, siehe [Word-Import](#word-import)
 - Wort- und Zeichenzählung
 - Status pro Dokument: **Idee**, **Work in Progress**, **Finished**, **Archived**. Eigentümer:in und „Bearbeiten"
   setzen ihn im Dokumentkopf. Die Dokumentliste zeigt ihn als Abzeichen und filtert danach; archivierte Dokumente
@@ -105,6 +106,33 @@ Anker, die Marke `comment` mit der Kommentar-ID (`client/src/comment-mark.js`). 
 diese Marke, deshalb dürfen auch Personen mit „Vorschlagen" kommentieren. Bei ausgeschaltetem automatischem Speichern
 erreicht der Anker die anderen erst mit **Speichern**; der Kommentar selbst erscheint sofort.
 
+## Word-Import
+
+Zwei Wege: **Word importieren** in der Dokumentliste legt ein neues Dokument mit dem Dateinamen als Titel an. Das
+Symbol **Word-Datei importieren** im Dokumentkopf (Eigentümer:in und „Bearbeiten") füllt ein leeres Dokument oder
+fügt den Inhalt an der Cursorposition ein. Die Datei wird im Browser gelesen.
+
+| In Word | Im Editor |
+|---|---|
+| Überschriften, fett, kursiv, unterstrichen, durchgestrichen, hoch/tief, Links, Ausrichtung | übernommen; Überschriften ab Ebene 4 werden Ebene 3 |
+| Aufzählungen und nummerierte Listen, auch verschachtelt | Listen |
+| Tabellen mit verbundenen Zellen und Kopfzeile | Tabellen |
+| Bilder (PNG, JPEG, GIF, WebP) mit Beschreibung | Bilder, Breite auf 25/50/75/100 % gerundet; andere Formate (EMF, TIFF) fehlen |
+| Änderungsverfolgung (Einfügen, Löschen, Verschieben) | Vorschläge mit dem Namen aus Word; annehmen oder ablehnen wie gewohnt |
+| Kommentare mit Antworten, Status „erledigt" | Kommentare mit Autor:in und Datum aus Word |
+| Zitate aus Zotero, Mendeley (auch Mendeley Cite), EndNote und Word („Quellen verwalten") | Zitate und Einträge der Literaturliste |
+| Literaturverzeichnis dieser Programme | entfällt, der Editor erzeugt sein eigenes |
+
+Kommentare: Heißt eine Person in Word genau wie ein Konto hier, gehört der Kommentar diesem Konto. Sonst steht der
+Name aus Word daneben, und niemand kann ihn bearbeiten; löschen dürfen ihn Eigentümer:in und „Bearbeiten".
+
+Nicht übernommen: Fußnoten (der Import nennt ihre Zahl), Formatänderungen aus der Änderungsverfolgung, Kopf- und
+Fußzeilen, Textfelder. Zitate als reiner Text, etwa „[3]" ohne Zitierprogramm, bleiben Text.
+
+Rundweg: Der Word-Export schreibt Zitate als Feld mit CSL-JSON (wie Mendeley) und das Literaturverzeichnis im Stil
+„Bibliography". Exportierst du ein Dokument, lässt es in Word überarbeiten und importierst es wieder, bleiben Zitate,
+Literaturliste, Kommentare und Änderungen erhalten.
+
 ## Technik
 
 | Teil | Wahl |
@@ -133,7 +161,7 @@ npm start                                 # http://127.0.0.1:5200
 Weitere Admins: `npm run adduser -- <name> "<Anzeigename>" --admin` oder über `/admin`.
 
 Tests: `npm test` (Lizenz- und Branding-Dateien vorhanden, Übersetzungen vollständig, Zitatlogik, Login, Dokument-API, Rollen und Freigaben, Admin-API, Echtzeit-Sync,
-serverseitige Vorschlagsprüfung, Kommentare und ihre Rechte).
+serverseitige Vorschlagsprüfung, Kommentare und ihre Rechte, Word-Import).
 
 ## Konfiguration
 
@@ -231,7 +259,7 @@ Unter diesen Bedingungen:
 | Hocuspocus, Yjs, `y-tiptap` | MIT |
 | TipTap, ProseMirror | MIT |
 | `@handlewithcare/prosemirror-suggest-changes` | MIT |
-| `docx` | MIT |
+| `docx`, `fflate` | MIT |
 | Tabler, Tabler Icons | MIT |
 | Vite (nur Build) | MIT |
 

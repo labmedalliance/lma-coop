@@ -400,6 +400,18 @@ export const EN = {
   'Nur PNG, JPEG, GIF oder WebP möglich': 'Only PNG, JPEG, GIF or WebP possible',
   'Bild ist zu groß (höchstens 10 MB)': 'Image is too large (at most 10 MB)',
   'Bild nicht gefunden': 'Image not found',
+
+  // Word import
+  'Word importieren': 'Import Word',
+  'Neues Dokument aus einer Word-Datei (.docx), mit Kommentaren, Änderungen und Zitaten':
+    'New document from a Word file (.docx), with comments, changes and citations',
+  'Word-Datei importieren': 'Import Word file',
+  'Word-Datei wird importiert …': 'Importing Word file …',
+  'Word-Datei importiert: {changes} Änderungen, {comments} Kommentare, {citations} Zitate, {images} Bilder.':
+    'Word file imported: {changes} changes, {comments} comments, {citations} citations, {images} images.',
+  '{n} Bilder fehlen (nur PNG, JPEG, GIF und WebP möglich).': '{n} images are missing (only PNG, JPEG, GIF and WebP possible).',
+  'Fußnoten werden nicht übernommen ({n}).': 'Footnotes are not imported ({n}).',
+  'Keine gültige Word-Datei (.docx)': 'Not a valid Word file (.docx)',
 };
 
 /** Translates German `key` into the UI language and fills in {placeholders} from `vars`. */
