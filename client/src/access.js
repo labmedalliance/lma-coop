@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Janne Cadamuro / LabMed Alliance Inc. — see LICENSE and NOTICE
-// Access requests from the requester's side: the "no access" screen and "Bearbeiten beantragen" for suggesters.
+// Access requests from the requester's side: the "no access" screen and "… beantragen" for suggesters and viewers.
+// Admins can take the right to request away from an account; the server then refuses requests.
 import { api, toast } from './base.js';
 import { t } from './i18n.js';
 import { url } from './paths.js';
 
 const $ = (id) => document.getElementById(id);
-const ROLE_LABELS = { editor: t('Bearbeiten'), suggester: t('Vorschlagen') };
+const ROLE_LABELS = { editor: t('Bearbeiten'), suggester: t('Vorschlagen'), viewer: t('Lesen') };
+const REQUEST_ROLES = ['suggester', 'editor'];
 const POLL_MS = 15_000;
 
 function el(tag, className, text) {
@@ -60,12 +62,15 @@ export async function showNoAccess(docId) {
         toast(t('Antrag zurückgezogen'), { actionLabel: t('Rückgängig'), onAction: () => submit(previous) });
       });
       children.push(text, actionsOf(withdraw, backLink('btn-link')));
+    } else if (!state.canRequest) {
+      children.push(el('p', 'empty-subtitle text-secondary',
+        t('Bitte die Eigentümer:in oder einen Admin, dir das Dokument freizugeben.')), backLink('btn-link'));
     } else {
       children.push(el('p', 'empty-subtitle text-secondary', t('Bitte die Eigentümer:in um Zugriff:')));
       const select = el('select', 'form-select');
       select.setAttribute('aria-label', t('Gewünschte Rolle'));
-      for (const [value, label] of Object.entries(ROLE_LABELS)) {
-        const o = el('option', '', label);
+      for (const value of REQUEST_ROLES) {
+        const o = el('option', '', ROLE_LABELS[value]);
         o.value = value;
         select.append(o);
       }
@@ -109,19 +114,26 @@ function backLink(extra = 'btn-primary') {
   return a;
 }
 
-/** Header button for suggesters: request edit rights, or withdraw a pending request. */
-export async function setupEditRequest(docId) {
+/**
+ * Header button for the next step up: "Lesen" requests "Vorschlagen", "Vorschlagen" requests "Bearbeiten".
+ * A second click withdraws the pending request.
+ */
+export async function setupEditRequest(docId, role) {
   const button = $('request-edit');
   const label = button.querySelector('span');
+  const wanted = role === 'viewer' ? 'suggester' : 'editor';
   let pending = null;
   const render = () => {
     button.hidden = false;
-    label.textContent = t(pending ? 'Bearbeiten beantragt' : 'Bearbeiten beantragen');
-    button.title = t(pending ? 'Antrag zurückziehen' : 'Die Eigentümer:in um Bearbeitungsrechte bitten');
+    if (wanted === 'suggester') label.textContent = t(pending ? 'Vorschlagen beantragt' : 'Vorschlagen beantragen');
+    else label.textContent = t(pending ? 'Bearbeiten beantragt' : 'Bearbeiten beantragen');
+    if (pending) button.title = t('Antrag zurückziehen');
+    else if (wanted === 'suggester') button.title = t('Die Eigentümer:in bitten, Änderungen vorschlagen zu dürfen');
+    else button.title = t('Die Eigentümer:in um Bearbeitungsrechte bitten');
     button.classList.toggle('active', !!pending);
   };
   const request = async () => {
-    ({ pending } = await api(`/api/docs/${docId}/request`, { method: 'PUT', body: { role: 'editor' } }));
+    ({ pending } = await api(`/api/docs/${docId}/request`, { method: 'PUT', body: { role: wanted } }));
     render();
   };
   try {

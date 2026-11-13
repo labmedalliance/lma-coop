@@ -174,3 +174,36 @@
   background-image: none;
   padding-right: 0.75rem;
 }
+
+/* Admin: permissions of one person */
+.perm-dialog {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.perm-docs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.perm-docs li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-top: 1px solid #f1f5f9;
+  min-height: 44px;
+}
+
+.perm-docs .form-select {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.perm-doc-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -54,6 +54,8 @@ export function commentsRouter({ onChange = () => {} } = {}) {
   router.use((req, res, next) => {
     req.role = roleFor(req.user.id, req.params.id);
     if (!req.role) return res.status(404).json({ error: 'Nicht gefunden' });
+    // "Lesen" sees comments but does not write any.
+    if (req.role === 'viewer' && req.method !== 'GET') return res.status(403).json({ error: 'Keine Berechtigung' });
     next();
   });
 

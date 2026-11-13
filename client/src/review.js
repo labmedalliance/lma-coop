@@ -20,7 +20,7 @@ const excerpt = (text, max = 80) => (text.length > max ? `${text.slice(0, max - 
  * Returns { suggesting() }.
  */
 export function setupReview({ editor, role, docId, onModeChange }) {
-  const canDecide = role !== 'suggester';
+  const canDecide = role === 'owner' || role === 'editor';
   const run = (command) => command(editor.state, editor.view.dispatch, editor.view);
   const authors = new Map();
 
@@ -52,6 +52,10 @@ export function setupReview({ editor, role, docId, onModeChange }) {
       try { localStorage.setItem(`${MODE_KEY}:${docId}`, select.value); } catch { /* storage unavailable */ }
       editor.commands.focus();
     });
+  } else if (role === 'viewer') {
+    $('mode-badge').textContent = t('Nur lesen');
+    $('mode-badge').classList.replace('bg-orange-lt', 'bg-secondary-lt');
+    $('mode-badge').hidden = false;
   } else {
     $('mode-badge').hidden = false;
     setSuggesting(true);

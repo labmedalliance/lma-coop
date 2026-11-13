@@ -40,6 +40,10 @@ db.exec(`
 
 const userColumns = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
 if (!userColumns.includes('is_admin')) db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
+// Per-account permissions set by admins: create documents, request more rights, see titles of other documents.
+for (const column of ['can_create', 'can_request', 'see_others']) {
+  if (!userColumns.includes(column)) db.exec(`ALTER TABLE users ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 1`);
+}
 
 // Document status. Documents from before this column count as work in progress; new ones start as "idea".
 const docColumns = db.prepare('PRAGMA table_info(documents)').all().map((c) => c.name);
@@ -49,7 +53,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS document_members (
     doc_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role TEXT NOT NULL CHECK (role IN ('editor', 'suggester')),
+    role TEXT NOT NULL CHECK (role IN ('editor', 'suggester', 'viewer')),
     PRIMARY KEY (doc_id, user_id)
   );
   CREATE TABLE IF NOT EXISTS access_requests (
@@ -60,6 +64,24 @@ db.exec(`
     PRIMARY KEY (doc_id, user_id)
   );
 `);
+
+// Role "viewer" (read only): older databases have a CHECK without it, and SQLite cannot change a CHECK in place.
+const membersSql = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'document_members'").get().sql;
+if (!membersSql.includes("'viewer'")) {
+  db.exec(`
+    BEGIN;
+    CREATE TABLE document_members_new (
+      doc_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL CHECK (role IN ('editor', 'suggester', 'viewer')),
+      PRIMARY KEY (doc_id, user_id)
+    );
+    INSERT INTO document_members_new (doc_id, user_id, role) SELECT doc_id, user_id, role FROM document_members;
+    DROP TABLE document_members;
+    ALTER TABLE document_members_new RENAME TO document_members;
+    COMMIT;
+  `);
+}
 
 // There is always at least one admin: if none exists, the oldest account becomes admin.
 if (!db.prepare('SELECT 1 FROM users WHERE is_admin = 1').get()) {

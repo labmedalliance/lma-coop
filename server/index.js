@@ -41,10 +41,12 @@ const hocuspocus = new Hocuspocus({
   timeout: 30_000,
   debounce: 2000,
   maxDebounce: 10_000,
-  async onAuthenticate({ request, documentName }) {
+  async onAuthenticate({ request, documentName, connectionConfig }) {
     const user = userFromCookieHeader(request.headers.get('cookie'));
     const role = user && roleFor(user.id, documentName);
     if (!role) throw new Error('Unauthorized');
+    // "Lesen": the server ignores every change from this connection.
+    if (role === 'viewer') connectionConfig.readOnly = true;
     return { user, role };
   },
   // "Suggest only" users: every incoming change must consist of suggestions only.
@@ -159,7 +161,7 @@ function notifyCommentsChange({ docId }) {
 app.use('/api/docs/:id/comments', requireUser, commentsRouter({ onChange: notifyCommentsChange }));
 app.use('/api/docs/:id/images', requireUser, imagesRouter(), imageUploadErrors);
 app.use('/api/docs', requireUser, docsRouter({ onAccessChange: closeConnectionsOf, onRequestsChange: notifyRequestsChange }));
-app.use('/api/admin', requireUser, adminRouter({ onUsersChanged: closeConnectionsOf }));
+app.use('/api/admin', requireUser, adminRouter({ onUsersChanged: closeConnectionsOf, onRequestsChange: notifyRequestsChange }));
 
 app.get('/api/cite', requireUser, async (req, res) => {
   try {

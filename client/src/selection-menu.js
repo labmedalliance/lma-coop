@@ -9,8 +9,8 @@ import { t } from './i18n.js';
 const GAP = 8;
 const touch = window.matchMedia('(pointer: coarse)');
 
-/** Sets up the menu. `onComment()` starts a comment on the current selection. */
-export function setupSelectionMenu({ editor, onComment }) {
+/** Sets up the menu. `onComment()` starts a comment on the current selection. `readOnly` leaves only "Kopieren". */
+export function setupSelectionMenu({ editor, onComment, readOnly = false }) {
   const menu = document.createElement('div');
   menu.className = 'selection-menu d-print-none';
   menu.setAttribute('role', 'toolbar');
@@ -23,7 +23,7 @@ export function setupSelectionMenu({ editor, onComment }) {
     ['comment', 'message-plus', t('Kommentieren'), () => { hide(); onComment(); }],
     ['delete', 'trash', t('Löschen'), remove],
   ];
-  for (const [name, icon, label, run] of actions) {
+  for (const [name, icon, label, run] of readOnly ? actions.slice(0, 1) : actions) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.dataset.action = name;

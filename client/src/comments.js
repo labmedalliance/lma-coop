@@ -123,10 +123,11 @@ function textForm({ key, placeholder, submitLabel, value = '', onSubmit, onCance
 }
 
 /**
- * Sets up the comment panel. `canEdit` (owner/editor) may delete comments of others.
+ * Sets up the comment panel. `canEdit` (owner/editor) may delete comments of others. Without `canComment`
+ * ("Lesen") the panel only shows the comments.
  * Returns { threads() } for the Word export.
  */
-export function setupComments({ editor, docId, me, canEdit, provider }) {
+export function setupComments({ editor, docId, me, canEdit, canComment = true, provider }) {
   const panel = $('comments-panel');
   const toggleBtn = $('toggle-comments');
   const list = $('comment-list');
@@ -194,13 +195,14 @@ export function setupComments({ editor, docId, me, canEdit, provider }) {
   // --- New comment ---
   const addBtn = document.querySelector('#toolbar button[data-cmd="comment"]');
   function updateAddButton() {
-    addBtn.disabled = editor.state.selection.empty;
+    addBtn.disabled = !canComment || editor.state.selection.empty;
   }
   editor.on('selectionUpdate', updateAddButton);
   editor.on('transaction', updateAddButton);
   updateAddButton();
 
   function startComment() {
+    if (!canComment) return;
     const { from, to, empty } = editor.state.selection;
     if (empty) {
       toast(t('Markiere zuerst den Text, den du kommentieren willst.'));
@@ -269,17 +271,17 @@ export function setupComments({ editor, docId, me, canEdit, provider }) {
     head.append(who);
 
     const tools = el('div', 'comment-tools');
-    if (isRoot && !thread.resolvedAt) {
+    if (canComment && isRoot && !thread.resolvedAt) {
       const done = iconButton('check', t('Erledigt'), 'btn-ghost-success');
       done.addEventListener('click', (e) => { e.stopPropagation(); resolve(thread, true); });
       tools.append(done);
     }
-    if (comment.authorId === me.id) {
+    if (canComment && comment.authorId === me.id) {
       const edit = iconButton('pencil', t('Bearbeiten'));
       edit.addEventListener('click', (e) => { e.stopPropagation(); editing = comment.id; render(); });
       tools.append(edit);
     }
-    if (comment.authorId === me.id || canEdit) {
+    if (canComment && (comment.authorId === me.id || canEdit)) {
       const del = iconButton('trash', t(isRoot ? 'Kommentar löschen' : 'Antwort löschen'), 'btn-ghost-danger');
       del.addEventListener('click', (e) => { e.stopPropagation(); remove(comment, isRoot); });
       tools.append(del);
@@ -323,12 +325,14 @@ export function setupComments({ editor, docId, me, canEdit, provider }) {
     if (thread.resolvedAt) {
       const row = el('div', 'comment-resolved small text-secondary');
       row.append(el('span', '', t('Erledigt von {name}', { name: thread.resolvedBy || t('Unbekannt') })));
-      const reopen = el('button', 'btn btn-sm btn-ghost-primary', t('Wieder öffnen'));
-      reopen.type = 'button';
-      reopen.addEventListener('click', (e) => { e.stopPropagation(); resolve(thread, false); });
-      row.append(reopen);
+      if (canComment) {
+        const reopen = el('button', 'btn btn-sm btn-ghost-primary', t('Wieder öffnen'));
+        reopen.type = 'button';
+        reopen.addEventListener('click', (e) => { e.stopPropagation(); resolve(thread, false); });
+        row.append(reopen);
+      }
       li.append(row);
-    } else {
+    } else if (canComment) {
       const { form } = textForm({
         key: `reply:${thread.id}`,
         placeholder: t('Antworten …'),

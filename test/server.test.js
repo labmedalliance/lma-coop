@@ -189,7 +189,7 @@ test('users request access or edit rights; the owner approves or declines', asyn
 
   assert.equal((await json(clara, `/api/docs/${randomUUID()}/request`)).status, 404, 'unknown document');
   assert.deepEqual(await (await json(clara, `/api/docs/${id}/request`)).json(),
-    { title: 'Requested paper', owner: 'Anna', role: null, pending: null });
+    { title: 'Requested paper', owner: 'Anna', role: null, pending: null, canRequest: true });
   let other = (await (await json(clara, '/api/docs/discover')).json()).find((d) => d.id === id);
   assert.equal(other.title, 'Requested paper');
   assert.equal(other.requested, null);
@@ -232,6 +232,103 @@ test('users request access or edit rights; the owner approves or declines', asyn
 
   a.provider.destroy();
   a.websocketProvider.destroy();
+});
+
+test('role "Lesen": reads the document and comments, changes nothing; may request "Vorschlagen"', async () => {
+  const anna = await login();
+  const fritzPassword = randomUUID();
+  assert.equal((await json(anna, '/api/admin/users', 'POST', { username: 'fritz', name: 'Fritz', password: fritzPassword })).status, 201);
+  const fritz = await login('fritz', fritzPassword);
+  const fritzId = (await (await json(anna, '/api/users')).json()).find((u) => u.username === 'fritz').id;
+  const { id } = await (await json(anna, '/api/docs', 'POST', { title: 'Read me' })).json();
+  assert.equal((await json(anna, `/api/docs/${id}/members/${fritzId}`, 'PUT', { role: 'viewer' })).status, 200);
+  assert.equal((await (await json(fritz, `/api/docs/${id}`)).json()).role, 'viewer');
+  assert.equal((await (await json(fritz, '/api/docs')).json()).find((d) => d.id === id).role, 'viewer');
+  assert.equal((await json(fritz, `/api/docs/${id}`, 'PATCH', { title: 'Nope' })).status, 403);
+
+  const a = await connect(id, anna);
+  a.doc.getMap('references').set('r1', { title: 'Existing' });
+  const f = await connect(id, fritz);
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(f.doc.getMap('references').get('r1').title, 'Existing', 'viewer receives the document');
+  // The server ignores the viewer's changes.
+  f.doc.getMap('references').set('r2', { title: 'From Fritz' });
+  f.doc.getMap('references').delete('r1');
+  await new Promise((r) => setTimeout(r, 300));
+  assert.ok(a.doc.getMap('references').has('r1'));
+  assert.ok(!a.doc.getMap('references').has('r2'));
+  for (const c of [a, f]) { c.provider.destroy(); c.websocketProvider.destroy(); }
+
+  // Comments: read yes, write no. Images: load yes, upload no.
+  const thread = randomUUID();
+  assert.equal((await json(anna, `/api/docs/${id}/comments`, 'POST', { id: thread, body: 'Hi', quote: 'x' })).status, 201);
+  assert.equal((await (await json(fritz, `/api/docs/${id}/comments`)).json()).length, 1);
+  assert.equal((await json(fritz, `/api/docs/${id}/comments`, 'POST', { id: randomUUID(), body: 'Me too' })).status, 403);
+  assert.equal((await json(fritz, `/api/docs/${id}/comments/${thread}/replies`, 'POST', { body: 'Re' })).status, 403);
+  assert.equal((await json(fritz, `/api/docs/${id}/comments/${thread}/resolve`, 'POST', { resolved: true })).status, 403);
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
+  const upload = await fetch(`${base}/api/docs/${id}/images`, { method: 'POST', headers: { cookie: fritz }, body: png });
+  assert.equal(upload.status, 403);
+
+  // Next step up is "Vorschlagen" or "Bearbeiten"; "Lesen" cannot be requested.
+  assert.equal((await json(fritz, `/api/docs/${id}/request`, 'PUT', { role: 'viewer' })).status, 400);
+  assert.equal((await json(fritz, `/api/docs/${id}/request`, 'PUT', { role: 'suggester' })).status, 200);
+  assert.equal((await (await json(anna, `/api/docs/${id}/requests`)).json())[0].current, 'viewer');
+  assert.equal((await json(fritz, `/api/docs/${id}/request`, 'DELETE')).status, 200);
+});
+
+test('admin sets account permissions and document access per person', async () => {
+  const anna = await login();
+  const annaId = (await (await json(anna, '/api/me')).json()).id;
+  const gretaPassword = randomUUID();
+  assert.equal((await json(anna, '/api/admin/users', 'POST', { username: 'greta', name: 'Greta', password: gretaPassword })).status, 201);
+  const greta = await login('greta', gretaPassword);
+  const gretaId = (await (await json(anna, '/api/users')).json()).find((u) => u.username === 'greta').id;
+  const { id } = await (await json(anna, '/api/docs', 'POST', { title: 'Admin shared' })).json();
+
+  // Defaults: everything allowed.
+  let row = (await (await json(anna, '/api/admin/users')).json()).find((u) => u.id === gretaId);
+  assert.deepEqual([row.canCreate, row.canRequest, row.seeOthers, row.sharedDocs], [true, true, true, 0]);
+  const me = await (await json(greta, '/api/me')).json();
+  assert.deepEqual([me.canCreate, me.canRequest, me.seeOthers], [true, true, true]);
+
+  // 3) Creating documents.
+  assert.equal((await json(anna, `/api/admin/users/${gretaId}`, 'PATCH', { canCreate: false })).status, 200);
+  assert.equal((await json(greta, '/api/docs', 'POST', { title: 'Mine' })).status, 403);
+  assert.equal((await (await json(greta, '/api/me')).json()).canCreate, false);
+
+  // 4) Requesting rights.
+  assert.equal((await json(anna, `/api/admin/users/${gretaId}`, 'PATCH', { canRequest: false })).status, 200);
+  assert.equal((await json(greta, `/api/docs/${id}/request`, 'PUT', { role: 'suggester' })).status, 403);
+  assert.equal((await (await json(greta, `/api/docs/${id}/request`)).json()).canRequest, false);
+
+  // 1) Titles of other documents.
+  assert.ok((await (await json(greta, '/api/docs/discover')).json()).some((d) => d.id === id));
+  assert.equal((await json(anna, `/api/admin/users/${gretaId}`, 'PATCH', { seeOthers: false })).status, 200);
+  assert.deepEqual(await (await json(greta, '/api/docs/discover')).json(), []);
+  assert.equal((await json(greta, `/api/docs/${id}/request`)).status, 404, 'hidden documents stay hidden');
+
+  // 1) + 2) Admin grants a document with a role, changes it and removes it.
+  const docs = await (await json(anna, `/api/admin/users/${gretaId}/docs`)).json();
+  assert.equal(docs.find((d) => d.id === id).role, null);
+  assert.equal((await json(anna, `/api/admin/users/${gretaId}/docs/${id}`, 'PUT', { role: 'owner' })).status, 400);
+  assert.equal((await json(anna, `/api/admin/users/${gretaId}/docs/${id}`, 'PUT', { role: 'viewer' })).status, 200);
+  assert.equal((await (await json(greta, `/api/docs/${id}`)).json()).role, 'viewer');
+  assert.equal((await json(greta, `/api/docs/${id}/request`)).status, 200, 'shared documents are visible again');
+  assert.equal((await json(anna, `/api/admin/users/${gretaId}/docs/${id}`, 'PUT', { role: 'editor' })).status, 200);
+  assert.equal((await (await json(greta, `/api/docs/${id}`)).json()).role, 'editor');
+  row = (await (await json(anna, '/api/admin/users')).json()).find((u) => u.id === gretaId);
+  assert.equal(row.sharedDocs, 1);
+  assert.equal((await json(anna, `/api/admin/users/${gretaId}/docs/${id}`, 'PUT', { role: null })).status, 200);
+  assert.equal((await json(greta, `/api/docs/${id}`)).status, 404);
+
+  // Not for the owner of the document, not for yourself, not for non-admins.
+  const { id: annas } = await (await json(anna, '/api/docs', 'POST', { title: 'Anna only' })).json();
+  assert.equal((await json(anna, `/api/admin/users/${annaId}/docs/${annas}`, 'PUT', { role: 'editor' })).status, 400);
+  assert.equal((await json(greta, `/api/admin/users/${gretaId}/docs/${annas}`, 'PUT', { role: 'editor' })).status, 403);
+  assert.equal((await json(greta, `/api/admin/users/${gretaId}/docs`)).status, 403);
+  const ownerRow = (await (await json(anna, `/api/admin/users/${annaId}/docs`)).json()).find((d) => d.id === annas);
+  assert.equal(ownerRow.role, 'owner');
 });
 
 test('comments: every role comments, replies and resolves; only authors edit; deleting needs rights', async () => {

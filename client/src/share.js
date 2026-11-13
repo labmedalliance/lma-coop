@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Janne Cadamuro / LabMed Alliance Inc. — see LICENSE and NOTICE
-// "Freigeben" dialog: owners add people as editor or suggester, change roles, remove access and
-// answer access requests.
+// "Freigeben" dialog: owners add people as editor, suggester or viewer ("Lesen"), change roles, remove access
+// and answer access requests.
 import { api, toast } from './base.js';
 import { t } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
-const ROLE_LABELS = { editor: t('Bearbeiten'), suggester: t('Vorschlagen') };
+const ROLE_LABELS = { editor: t('Bearbeiten'), suggester: t('Vorschlagen'), viewer: t('Lesen') };
+const RANK = { viewer: 1, suggester: 2, editor: 3 };
 
 export function setupSharing({ docId, role, provider }) {
   const button = $('share-btn');
@@ -50,7 +51,7 @@ export function setupSharing({ docId, role, provider }) {
       select.className = 'form-select form-select-sm';
       select.setAttribute('aria-label', t('Rolle für {name}', { name: r.name }));
       for (const [value, text] of Object.entries(ROLE_LABELS)) {
-        if (r.current && value === r.current) continue; // Only upgrades make sense.
+        if (r.current && RANK[value] <= RANK[r.current]) continue; // Only upgrades make sense.
         const o = document.createElement('option');
         o.value = value;
         o.textContent = text;
