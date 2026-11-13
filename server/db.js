@@ -123,3 +123,17 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS images_doc ON images(doc_id);
 `);
+
+// Tags: one shared list for all accounts. A tag exists as long as a document uses it (server/docs.js).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tags (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE COLLATE NOCASE
+  );
+  CREATE TABLE IF NOT EXISTS document_tags (
+    doc_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (doc_id, tag_id)
+  );
+  CREATE INDEX IF NOT EXISTS document_tags_tag ON document_tags(tag_id);
+`);

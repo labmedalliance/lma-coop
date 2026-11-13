@@ -3,6 +3,7 @@
 // Collaborative document page: TipTap editor synced via Hocuspocus, toolbar, citations, export.
 import { api, toast, colorFor, initials } from './base.js';
 import { STATUSES } from './status.js';
+import { setupTags } from './tags.js';
 import { t, locale } from './i18n.js';
 import { url } from './paths.js';
 import './editor.css';
@@ -80,6 +81,10 @@ stateSelect.addEventListener('change', async () => {
     toast(err.message);
   }
 });
+
+// --- Tags -------------------------------------------------------------------
+
+setupTags({ docId, tags: meta.tags, canEdit });
 
 // --- Collaboration ----------------------------------------------------------
 

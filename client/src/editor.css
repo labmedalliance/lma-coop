@@ -24,7 +24,7 @@
 
 .doc-title {
   flex: 0 1 28rem;
-  min-width: 8rem;
+  min-width: 6.5rem; /* the header must fit at 1200px */
   font-size: 1.1rem;
   font-weight: 600;
   border-color: transparent;
@@ -747,4 +747,19 @@ body.is-suggesting .prose {
     clip: rect(0 0 0 0);
   }
   .selection-menu button { min-width: 44px; min-height: 44px; justify-content: center; }
+}
+
+/* Tag button in the header: an icon with the number of tags; the names are in the tooltip. */
+.doc-tags-btn {
+  position: relative;
+}
+
+.doc-tags-count {
+  position: absolute;
+  top: -0.2rem;
+  right: -0.2rem;
+  min-width: 1rem;
+  padding: 0.1rem 0.25rem;
+  font-size: 0.65rem;
+  line-height: 1;
 }

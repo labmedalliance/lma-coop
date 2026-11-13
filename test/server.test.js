@@ -103,6 +103,36 @@ test('sets a document status; renaming keeps it', async () => {
   assert.equal((await json(cookie, `/api/docs/${id}`, 'PATCH', { title: '  ' })).status, 400);
 });
 
+test('assigns tags to documents; unused tags disappear', async () => {
+  const cookie = await login();
+  const { id, tags } = await (await json(cookie, '/api/docs', 'POST', { title: 'Tagged' })).json();
+  assert.deepEqual(tags, []);
+  const { id: other } = await (await json(cookie, '/api/docs', 'POST', { title: 'Other' })).json();
+
+  let res = await json(cookie, `/api/docs/${id}/tags`, 'PUT', { tags: ['  Review ', 'präanalytik', 'review', ''] });
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).tags, ['präanalytik', 'Review'], 'trimmed, deduplicated, sorted');
+  // An existing tag keeps its spelling, whatever case the next document uses.
+  res = await json(cookie, `/api/docs/${other}/tags`, 'PUT', { tags: ['REVIEW'] });
+  assert.deepEqual((await res.json()).tags, ['Review']);
+
+  assert.deepEqual((await (await json(cookie, `/api/docs/${id}`)).json()).tags, ['präanalytik', 'Review']);
+  const listed = await (await json(cookie, '/api/docs')).json();
+  assert.deepEqual(listed.find((d) => d.id === other).tags, ['Review']);
+  let all = await (await json(cookie, '/api/docs/tags')).json();
+  assert.ok(all.includes('präanalytik') && all.includes('Review'));
+
+  await json(cookie, `/api/docs/${id}/tags`, 'PUT', { tags: ['Review'] });
+  all = await (await json(cookie, '/api/docs/tags')).json();
+  assert.ok(!all.includes('präanalytik'), 'tag without documents is gone');
+
+  assert.equal((await json(cookie, `/api/docs/${id}/tags`, 'PUT', { tags: 'Review' })).status, 400);
+  assert.equal((await json(cookie, `/api/docs/${id}/tags`, 'PUT', { tags: ['x'.repeat(41)] })).status, 400);
+  assert.equal((await json(cookie, `/api/docs/${id}/tags`, 'PUT', { tags: Array.from({ length: 21 }, (_, i) => `t${i}`) })).status, 400);
+  assert.equal((await json(cookie, `/api/docs/${id}/tags`, 'PUT', { tags: [] })).status, 200);
+  await json(cookie, `/api/docs/${other}/tags`, 'PUT', { tags: [] });
+});
+
 test('blocks cross-origin writes', async () => {
   const cookie = await login();
   const res = await fetch(`${base}/api/docs`, { method: 'POST', headers: { cookie, origin: 'http://evil.example' } });
@@ -148,6 +178,7 @@ test('admin manages users; documents are private until shared; suggesters may on
   assert.equal(listed.role, 'suggester');
   assert.equal((await json(ben, `/api/docs/${id}`, 'PATCH', { title: 'Hijack' })).status, 403);
   assert.equal((await json(ben, `/api/docs/${id}`, 'PATCH', { status: 'archived' })).status, 403, 'suggester may not set status');
+  assert.equal((await json(ben, `/api/docs/${id}/tags`, 'PUT', { tags: ['Hijack'] })).status, 403, 'suggester may not set tags');
   assert.equal((await json(ben, `/api/docs/${id}`, 'DELETE')).status, 403);
   // Only the owner deletes: edit rights are not enough.
   assert.equal((await json(anna, `/api/docs/${id}/members/${benId}`, 'PUT', { role: 'editor' })).status, 200);
@@ -302,10 +333,14 @@ test('admin sets account permissions and document access per person', async () =
   assert.equal((await json(greta, `/api/docs/${id}/request`, 'PUT', { role: 'suggester' })).status, 403);
   assert.equal((await (await json(greta, `/api/docs/${id}/request`)).json()).canRequest, false);
 
-  // 1) Titles of other documents.
+  // 1) Titles of other documents, and their tags.
+  await json(anna, `/api/docs/${id}/tags`, 'PUT', { tags: ['Geheimprojekt'] });
   assert.ok((await (await json(greta, '/api/docs/discover')).json()).some((d) => d.id === id));
+  assert.ok((await (await json(greta, '/api/docs/tags')).json()).includes('Geheimprojekt'));
   assert.equal((await json(anna, `/api/admin/users/${gretaId}`, 'PATCH', { seeOthers: false })).status, 200);
   assert.deepEqual(await (await json(greta, '/api/docs/discover')).json(), []);
+  assert.ok(!(await (await json(greta, '/api/docs/tags')).json()).includes('Geheimprojekt'), 'tags of hidden documents stay hidden');
+  await json(anna, `/api/docs/${id}/tags`, 'PUT', { tags: [] });
   assert.equal((await json(greta, `/api/docs/${id}/request`)).status, 404, 'hidden documents stay hidden');
 
   // 1) + 2) Admin grants a document with a role, changes it and removes it.
