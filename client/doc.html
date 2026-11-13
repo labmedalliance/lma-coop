@@ -153,6 +153,7 @@
         <input class="form-control" name="q" placeholder="DOI oder PMID" aria-label="DOI oder PMID" required>
         <button class="btn btn-primary" type="submit">Hinzufügen</button>
       </form>
+      <button class="btn btn-outline-primary w-100 mb-2" id="refs-manual" type="button"><i class="ti ti-pencil-plus me-1"></i> Manuell eingeben</button>
       <p class="text-secondary small">Die Liste gehört zu diesem Dokument; alle mit Zugriff sehen sie. Zitate nummerieren sich nach Reihenfolge im Text.</p>
       <ul class="refs-list" id="refs-list"></ul>
     </aside>
@@ -191,6 +192,7 @@
       <div class="d-flex gap-2 mb-2">
         <input class="form-control" id="cite-lookup" placeholder="Neue Quelle: DOI oder PMID" aria-label="DOI oder PMID">
         <button class="btn" id="cite-lookup-btn" type="button">Suchen</button>
+        <button class="btn" id="cite-manual" type="button" title="Quelle manuell eingeben">Manuell</button>
       </div>
       <div class="text-danger small mb-2" id="cite-error" role="alert"></div>
       <input class="form-control mb-2" id="cite-filter" type="search" placeholder="In der Literaturliste suchen …" aria-label="Literaturliste filtern">
@@ -201,5 +203,7 @@
       </div>
     </form>
   </dialog>
+
+  <dialog class="cite-dialog ref-dialog" id="ref-dialog"></dialog>
 </body>
 </html>

@@ -22,6 +22,7 @@ import { CommentHighlight, setupComments } from './comments.js';
 import { setupSelectionMenu } from './selection-menu.js';
 import { ImageUpload, insertImages } from './images.js';
 import { IMAGE_WIDTHS } from './image-node.js';
+import { setupReferenceForm } from './reference-form.js';
 
 const docId = window.location.pathname.split('/').pop();
 const $ = (id) => document.getElementById(id);
@@ -336,7 +337,23 @@ function renderRefsPanel() {
     const text = document.createElement('div');
     text.className = 'refs-text';
     text.textContent = formatReference(ref);
-    li.append(num, text);
+    const actions = document.createElement('div');
+    actions.className = 'refs-actions';
+    li.append(num, text, actions);
+    // Changing an entry is direct editing; the server allows "Vorschlagen" only to add entries.
+    if (canEdit) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'btn btn-ghost-secondary btn-icon btn-sm';
+      edit.setAttribute('aria-label', t('Quelle bearbeiten'));
+      edit.title = t('Quelle bearbeiten');
+      edit.innerHTML = '<i class="ti ti-pencil"></i>';
+      edit.addEventListener('click', async () => {
+        const changed = await openReferenceForm(references.get(id) || ref);
+        if (changed) references.set(id, changed);
+      });
+      actions.append(edit);
+    }
     if (!numbers.has(id) && canEdit) {
       const del = document.createElement('button');
       del.type = 'button';
@@ -347,7 +364,7 @@ function renderRefsPanel() {
         references.delete(id);
         toast(t('Quelle entfernt'), { actionLabel: t('Rückgängig'), onAction: () => references.set(id, ref) });
       });
-      li.append(del);
+      actions.append(del);
     }
     return li;
   }));
@@ -361,7 +378,11 @@ function refresh() {
 
 /** Adds a reference by DOI/PMID; reuses an existing entry with the same DOI or PMID. */
 async function addReference(q) {
-  const ref = await api(`/api/cite?q=${encodeURIComponent(q)}`);
+  return storeReference(await api(`/api/cite?q=${encodeURIComponent(q)}`));
+}
+
+/** Stores `ref` and returns its id; an entry with the same DOI or PMID is reused. */
+function storeReference(ref) {
   for (const [id, existing] of references.entries()) {
     if ((ref.doi && existing.doi?.toLowerCase() === ref.doi.toLowerCase()) || (ref.pmid && existing.pmid === ref.pmid)) {
       return id;
@@ -382,6 +403,15 @@ $('refs-add').addEventListener('submit', async (e) => {
     toast(err.message);
   }
 });
+
+const openReferenceForm = setupReferenceForm($('ref-dialog'));
+
+/** Manual entry: opens the form and stores the result. Returns the new id or null. */
+async function addManualReference() {
+  const ref = await openReferenceForm();
+  return ref ? storeReference(ref) : null;
+}
+$('refs-manual').addEventListener('click', addManualReference);
 
 const refsPanel = $('refs-panel');
 function toggleRefs(show = refsPanel.hidden) {
@@ -408,7 +438,7 @@ function renderCiteOptions() {
   if (!entries.length) {
     const li = document.createElement('li');
     li.className = 'text-secondary';
-    li.textContent = t(references.size ? 'Kein Treffer.' : 'Noch keine Quellen. Füge oben eine DOI oder PMID hinzu.');
+    li.textContent = t(references.size ? 'Kein Treffer.' : 'Noch keine Quellen. Füge oben eine DOI oder PMID hinzu oder gib sie manuell ein.');
     citeOptions.replaceChildren(li);
     return;
   }
@@ -459,6 +489,10 @@ $('cite-lookup').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); lookupInDialog(); }
 });
 citeFilter.addEventListener('input', renderCiteOptions);
+$('cite-manual').addEventListener('click', async () => {
+  const id = await addManualReference();
+  if (id) { selected.add(id); renderCiteOptions(); }
+});
 
 dialog.addEventListener('close', () => {
   if (dialog.returnValue !== 'ok' || !selected.size) { editor.commands.focus(); return; }
