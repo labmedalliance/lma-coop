@@ -89,6 +89,9 @@ export const EN = {
   '{n} offene Anträge': '{n} open requests',
   '„{title}" löschen': 'Delete “{title}”',
   '„{title}" gelöscht': '“{title}” deleted',
+  'Bist du sicher?': 'Are you sure?',
+  '„{title}" wird gelöscht. Alle Personen mit Freigabe verlieren den Zugriff.':
+    '“{title}” will be deleted. Everyone it is shared with loses access.',
   'Beantragt · {role}': 'Requested · {role}',
   'Zugriff beantragen': 'Request access',
 

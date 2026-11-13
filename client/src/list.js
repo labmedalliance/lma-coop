@@ -49,7 +49,7 @@ function render() {
     del.className = 'btn btn-ghost-danger btn-icon doc-delete';
     del.setAttribute('aria-label', t('„{title}" löschen', { title: d.title }));
     del.innerHTML = '<i class="ti ti-trash"></i>';
-    del.addEventListener('click', () => remove(d));
+    del.addEventListener('click', () => confirmRemove(d));
     card.append(del);
     return card;
   }));
@@ -92,6 +92,21 @@ async function load() {
   [docs, others] = await Promise.all([api('/api/docs'), api('/api/docs/discover')]);
   render();
 }
+
+// Only the owner sees the delete button; the server enforces the same rule.
+const deleteDialog = document.getElementById('delete-dialog');
+let deleteTarget = null;
+function confirmRemove(doc) {
+  deleteTarget = doc;
+  document.getElementById('delete-text').textContent =
+    t('„{title}" wird gelöscht. Alle Personen mit Freigabe verlieren den Zugriff.', { title: doc.title });
+  deleteDialog.returnValue = '';
+  deleteDialog.showModal();
+}
+deleteDialog.addEventListener('close', () => {
+  if (deleteDialog.returnValue === 'ok' && deleteTarget) remove(deleteTarget);
+  deleteTarget = null;
+});
 
 async function remove(doc) {
   await api(`/api/docs/${doc.id}`, { method: 'DELETE' });

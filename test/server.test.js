@@ -133,6 +133,10 @@ test('admin manages users; documents are private until shared; suggesters may on
   assert.equal(listed.role, 'suggester');
   assert.equal((await json(ben, `/api/docs/${id}`, 'PATCH', { title: 'Hijack' })).status, 403);
   assert.equal((await json(ben, `/api/docs/${id}`, 'DELETE')).status, 403);
+  // Only the owner deletes: edit rights are not enough.
+  assert.equal((await json(anna, `/api/docs/${id}/members/${benId}`, 'PUT', { role: 'editor' })).status, 200);
+  assert.equal((await json(ben, `/api/docs/${id}`, 'DELETE')).status, 403, 'editor may not delete');
+  assert.equal((await json(anna, `/api/docs/${id}/members/${benId}`, 'PUT', { role: 'suggester' })).status, 200);
 
   const a = await connect(id, anna);
   a.doc.getMap('references').set('r1', { title: 'Existing' });
