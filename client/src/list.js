@@ -4,12 +4,14 @@ import { api, logout, toast } from './base.js';
 import { t, locale } from './i18n.js';
 import { url } from './paths.js';
 import { statusBadge } from './status.js';
+import { tagBadge } from './tags.js';
 import { savePendingImport } from './pending-import.js';
 
 const grid = document.getElementById('doc-grid');
 const empty = document.getElementById('empty-state');
 const filter = document.getElementById('filter');
 const stateFilter = document.getElementById('state-filter');
+const tagFilter = document.getElementById('tag-filter');
 let docs = [];
 let others = [];
 let canRequest = true;
@@ -20,10 +22,34 @@ const ROLE_BADGES = {
 };
 
 // "active" hides archived documents; "all" shows everything; otherwise exactly that status.
+// The search matches the title and the tags.
 function matches(d, q) {
   const state = stateFilter.value;
   const stateOk = state === 'all' || (state === 'active' ? d.status !== 'archived' : d.status === state);
-  return stateOk && d.title.toLowerCase().includes(q);
+  const tag = tagFilter.value.toLowerCase();
+  const tagOk = !tag || d.tags.some((name) => name.toLowerCase() === tag);
+  const textOk = d.title.toLowerCase().includes(q) || d.tags.some((name) => name.toLowerCase().includes(q));
+  return stateOk && tagOk && textOk;
+}
+
+/** Row of tag badges for a card, or nothing without tags. */
+function tagRow(d) {
+  if (!d.tags.length) return [];
+  const row = document.createElement('div');
+  row.className = 'tag-list';
+  row.append(...d.tags.map(tagBadge));
+  return [row];
+}
+
+// Tag filter: all tags on the listed documents. Hidden while no document has tags.
+function fillTagFilter() {
+  const names = new Map();
+  for (const d of [...docs, ...others]) for (const name of d.tags) names.set(name.toLowerCase(), name);
+  const selected = tagFilter.value || savedTag;
+  const sorted = [...names.values()].sort((a, b) => a.localeCompare(b, locale));
+  tagFilter.replaceChildren(new Option(t('Alle Tags'), ''), ...sorted.map((name) => new Option(name, name)));
+  tagFilter.value = sorted.find((name) => name.toLowerCase() === selected.toLowerCase()) ?? '';
+  tagFilter.hidden = sorted.length === 0;
 }
 
 function render() {
@@ -57,6 +83,7 @@ function render() {
       badge.textContent = d.requests === 1 ? t('1 offener Antrag') : t('{n} offene Anträge', { n: d.requests });
       link.append(badge);
     }
+    link.append(...tagRow(d));
     card.append(link);
     if (d.role !== 'owner') return card;
     const del = document.createElement('button');
@@ -100,7 +127,7 @@ function renderOthers(q) {
       action.append(t(canRequest ? 'Zugriff beantragen' : 'Kein Zugriff'));
     }
     const state = statusBadge(d.status);
-    link.append(title, meta, ...(state ? [state] : []), action);
+    link.append(title, meta, ...(state ? [state] : []), action, ...tagRow(d));
     card.append(link);
     return card;
   }));
@@ -108,6 +135,7 @@ function renderOthers(q) {
 
 async function load() {
   [docs, others] = await Promise.all([api('/api/docs'), api('/api/docs/discover')]);
+  fillTagFilter();
   render();
 }
 
@@ -160,6 +188,14 @@ filter.addEventListener('input', render);
 stateFilter.addEventListener('change', () => {
   render();
   try { localStorage.setItem('lma-coop-state-filter', stateFilter.value); } catch { /* storage blocked */ }
+});
+// The tag filter remembers its choice; the options only exist once the documents are loaded.
+let savedTag = '';
+try { savedTag = localStorage.getItem('lma-coop-tag-filter') || ''; } catch { /* storage blocked */ }
+tagFilter.addEventListener('change', () => {
+  savedTag = tagFilter.value;
+  render();
+  try { localStorage.setItem('lma-coop-tag-filter', tagFilter.value); } catch { /* storage blocked */ }
 });
 try {
   const saved = localStorage.getItem('lma-coop-state-filter');

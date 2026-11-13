@@ -37,12 +37,15 @@
             <option value="finished">Finished</option>
             <option value="archived">Archived</option>
           </select>
+          <select class="form-select w-auto" id="tag-filter" aria-label="Nach Tag filtern" hidden>
+            <option value="">Alle Tags</option>
+          </select>
           <button class="btn" id="import-btn" type="button" title="Neues Dokument aus einer Word-Datei (.docx), mit Kommentaren, Änderungen und Zitaten"><i class="ti ti-file-import me-1"></i>Word importieren</button>
           <input type="file" id="import-input" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
           <button class="btn btn-primary" id="new-doc-btn" type="button"><i class="ti ti-plus me-1"></i>Neues Dokument</button>
         </div>
         <div class="doc-grid" id="doc-grid"></div>
-        <p class="text-secondary" id="state-empty" hidden>Keine Dokumente mit diesem Status.</p>
+        <p class="text-secondary" id="state-empty" hidden>Keine Dokumente für diese Auswahl.</p>
         <div class="empty d-none" id="empty-state">
           <p class="empty-title">Noch keine Dokumente</p>
           <p class="empty-subtitle text-secondary" id="empty-create-hint">Leg ein Dokument an und gib es über „Freigeben" für Kolleg:innen frei.</p>

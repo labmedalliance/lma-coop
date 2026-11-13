@@ -15,10 +15,72 @@ export const ROLES = ['editor', 'suggester', 'viewer'];
 const REQUEST_ROLES = ['editor', 'suggester'];
 const RANK = { viewer: 1, suggester: 2, editor: 3, owner: 4 };
 export const STATUSES = ['idea', 'wip', 'finished', 'archived'];
+// Limits for tags; the error message in PUT /:id/tags names them.
+export const MAX_TAGS = 20;
+export const MAX_TAG_LENGTH = 40;
 
 const docExists = (docId) => !!db.prepare('SELECT 1 FROM documents WHERE id = ? AND deleted_at IS NULL').get(docId);
 const pendingRequest = (docId, userId) => db.prepare('SELECT role, created_at FROM access_requests WHERE doc_id = ? AND user_id = ?')
   .get(docId, userId) ?? null;
+
+/** Tag names per document id, sorted by name. */
+function tagsByDoc() {
+  const map = new Map();
+  const rows = db.prepare(`SELECT dt.doc_id, t.name FROM document_tags dt JOIN tags t ON t.id = dt.tag_id
+    ORDER BY t.name COLLATE NOCASE`).all();
+  for (const { doc_id: docId, name } of rows) {
+    if (!map.has(docId)) map.set(docId, []);
+    map.get(docId).push(name);
+  }
+  return map;
+}
+const tagsOf = (docId) => db.prepare(`SELECT t.name FROM document_tags dt JOIN tags t ON t.id = dt.tag_id
+  WHERE dt.doc_id = ? ORDER BY t.name COLLATE NOCASE`).all(docId).map((r) => r.name);
+const withTags = (rows) => {
+  const tags = tagsByDoc();
+  return rows.map((row) => ({ ...row, tags: tags.get(row.id) ?? [] }));
+};
+
+/**
+ * Cleans a list of tag names: trims, collapses whitespace, drops empty and duplicate names (case-insensitive).
+ * Returns null if the input is not a list or breaks a limit.
+ */
+export function cleanTags(input) {
+  if (!Array.isArray(input)) return null;
+  const seen = new Set();
+  const names = [];
+  for (const raw of input) {
+    if (typeof raw !== 'string') return null;
+    const name = raw.replace(/\s+/g, ' ').trim();
+    if (!name) continue;
+    if (name.length > MAX_TAG_LENGTH) return null;
+    if (seen.has(name.toLowerCase())) continue;
+    seen.add(name.toLowerCase());
+    names.push(name);
+  }
+  return names.length > MAX_TAGS ? null : names;
+}
+
+/** Replaces the tags of a document. New names create tags; tags no document uses any more disappear. */
+function setTags(docId, names) {
+  db.exec('BEGIN');
+  try {
+    db.prepare('DELETE FROM document_tags WHERE doc_id = ?').run(docId);
+    const insertTag = db.prepare('INSERT INTO tags (name) VALUES (?) ON CONFLICT(name) DO NOTHING');
+    const tagId = db.prepare('SELECT id FROM tags WHERE name = ?');
+    const link = db.prepare('INSERT OR IGNORE INTO document_tags (doc_id, tag_id) VALUES (?, ?)');
+    for (const name of names) {
+      insertTag.run(name);
+      link.run(docId, tagId.get(name).id);
+    }
+    db.exec('DELETE FROM tags WHERE id NOT IN (SELECT tag_id FROM document_tags)');
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  return tagsOf(docId);
+}
 
 /** Role of the user in the document, or null without access (also for deleted documents). */
 export function roleFor(userId, docId) {
@@ -55,20 +117,31 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
       LEFT JOIN document_members m ON m.doc_id = d.id AND m.user_id = ?
       WHERE d.deleted_at IS NULL AND (d.owner_id = ? OR m.user_id IS NOT NULL)
       ORDER BY d.updated_at DESC`).all(req.user.id, req.user.id, req.user.id, req.user.id);
-    res.json(rows);
+    res.json(withTags(rows));
   });
 
   // Documents of others without access: titles are visible to every account, contents only after sharing.
   router.get('/discover', (req, res) => {
     if (!req.user.seeOthers) return res.json([]);
-    res.json(db.prepare(`
+    res.json(withTags(db.prepare(`
       SELECT d.id, d.title, d.status, d.updated_at, u.name AS owner, r.role AS requested
       FROM documents d
       LEFT JOIN users u ON u.id = d.owner_id
       LEFT JOIN document_members m ON m.doc_id = d.id AND m.user_id = ?
       LEFT JOIN access_requests r ON r.doc_id = d.id AND r.user_id = ?
       WHERE d.deleted_at IS NULL AND (d.owner_id IS NULL OR d.owner_id != ?) AND m.user_id IS NULL
-      ORDER BY d.updated_at DESC`).all(req.user.id, req.user.id, req.user.id));
+      ORDER BY d.updated_at DESC`).all(req.user.id, req.user.id, req.user.id)));
+  });
+
+  // Tag names for suggestions: only tags of documents whose titles the user may see.
+  router.get('/tags', (req, res) => {
+    res.json(db.prepare(`
+      SELECT DISTINCT t.name FROM tags t
+      JOIN document_tags dt ON dt.tag_id = t.id
+      JOIN documents d ON d.id = dt.doc_id AND d.deleted_at IS NULL
+      LEFT JOIN document_members m ON m.doc_id = d.id AND m.user_id = ?
+      WHERE ? OR d.owner_id = ? OR m.user_id IS NOT NULL
+      ORDER BY t.name COLLATE NOCASE`).all(req.user.id, req.user.seeOthers ? 1 : 0, req.user.id).map((r) => r.name));
   });
 
   router.post('/', (req, res) => {
@@ -78,12 +151,21 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
     const title = String(req.body?.title || 'Unbenanntes Dokument').slice(0, 200);
     db.prepare("INSERT INTO documents (id, title, status, owner_id, created_at, updated_at) VALUES (?, ?, 'idea', ?, ?, ?)")
       .run(id, title, req.user.id, now, now);
-    res.status(201).json({ id, title, status: 'idea' });
+    res.status(201).json({ id, title, status: 'idea', tags: [] });
   });
 
   router.get('/:id', access(), (req, res) => {
     const row = db.prepare('SELECT id, title, status FROM documents WHERE id = ?').get(req.params.id);
-    res.json({ ...row, role: req.role });
+    res.json({ ...row, tags: tagsOf(row.id), role: req.role });
+  });
+
+  // Replaces all tags of the document: { tags: ["Review", "Präanalytik"] }. Returns the stored names.
+  router.put('/:id/tags', access('owner', 'editor'), (req, res) => {
+    const names = cleanTags(req.body?.tags);
+    if (!names) {
+      return res.status(400).json({ error: 'Höchstens 20 Tags mit je höchstens 40 Zeichen' });
+    }
+    res.json({ tags: setTags(req.params.id, names) });
   });
 
   // Title and/or status; either field may be left out.

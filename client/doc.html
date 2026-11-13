@@ -16,6 +16,10 @@
     <a class="btn btn-ghost-secondary btn-icon" href="/" aria-label="Zur Dokumentliste"><i class="ti ti-arrow-left"></i></a>
     <input class="form-control doc-title" id="doc-title" aria-label="Dokumenttitel" maxlength="200">
     <select class="form-select form-select-sm doc-state-select" id="doc-state" aria-label="Status"></select>
+    <button class="btn btn-ghost-secondary btn-icon doc-tags-btn" id="doc-tags" type="button" title="Tags" aria-label="Tags">
+      <i class="ti ti-tags"></i>
+      <span class="badge bg-blue text-white doc-tags-count" id="doc-tags-count" hidden></span>
+    </button>
     <span class="doc-status text-secondary small" id="sync-status">Verbinde …</span>
     <i class="ti ti-device-floppy save-icon" id="save-icon" title="Gespeichert" aria-hidden="true" hidden></i>
     <label class="form-check form-switch m-0 autosave-switch" title="Automatisch speichern">
@@ -186,6 +190,25 @@
         <button class="btn btn-primary" id="share-add-btn" type="button">Hinzufügen</button>
       </div>
       <div class="text-danger small mt-2" id="share-error" role="alert"></div>
+      <div class="d-flex justify-content-end mt-3">
+        <button class="btn" value="close" type="submit">Schließen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="cite-dialog" id="tags-dialog" aria-labelledby="tags-title">
+    <form method="dialog">
+      <h2 class="h3" id="tags-title">Tags</h2>
+      <div class="tag-list mb-3" id="tags-current"></div>
+      <p class="text-secondary small" id="tags-none">Dieses Dokument hat noch keine Tags.</p>
+      <div id="tags-edit">
+        <label class="form-label" for="tags-input">Tag hinzufügen</label>
+        <div class="input-group mb-2">
+          <input class="form-control" id="tags-input" maxlength="40" autocomplete="off" placeholder="Neuen Tag eingeben oder unten auswählen">
+          <button class="btn" id="tags-add" type="button">Hinzufügen</button>
+        </div>
+        <div class="tag-list" id="tags-suggest"></div>
+      </div>
       <div class="d-flex justify-content-end mt-3">
         <button class="btn" value="close" type="submit">Schließen</button>
       </div>
