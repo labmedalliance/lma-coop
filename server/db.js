@@ -124,7 +124,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS images_doc ON images(doc_id);
 `);
 
-// Tags: one shared list for all accounts. A tag exists as long as a document uses it (server/docs.js).
+// Tags: one shared list for all accounts. Only admins create, rename and delete tags (server/admin.js);
+// owners and editors assign them to documents (server/docs.js).
 db.exec(`
   CREATE TABLE IF NOT EXISTS tags (
     id INTEGER PRIMARY KEY,

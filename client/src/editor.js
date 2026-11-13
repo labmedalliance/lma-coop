@@ -84,7 +84,7 @@ stateSelect.addEventListener('change', async () => {
 
 // --- Tags -------------------------------------------------------------------
 
-setupTags({ docId, tags: meta.tags, canEdit });
+setupTags({ docId, tags: meta.tags, canEdit, isAdmin: me.isAdmin });
 
 // --- Collaboration ----------------------------------------------------------
 
