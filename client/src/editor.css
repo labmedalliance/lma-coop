@@ -321,28 +321,6 @@
   text-align: right;
 }
 
-/* Citation dialog */
-.cite-dialog {
-  width: min(560px, calc(100vw - 32px));
-  border: 0;
-  border-radius: 8px;
-  padding: 1.25rem;
-  box-shadow: 0 20px 48px rgb(0 0 0 / 0.25);
-}
-
-.cite-dialog[open] {
-  animation: dialog-in 140ms ease-out;
-}
-
-@keyframes dialog-in {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.cite-dialog::backdrop {
-  background: rgb(15 23 42 / 0.4);
-}
-
 .cite-options {
   list-style: none;
   padding: 0;
