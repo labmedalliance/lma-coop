@@ -3,15 +3,17 @@
 // Documents, per-document roles and sharing.
 //
 // Roles: "owner" (everything incl. sharing and deleting), "editor" (edit directly, accept or reject
-// suggestions, rename), "suggester" (only suggestions; may add but not remove references).
-// Logged-in users can request access to a document, or "editor" instead of "suggester"; the owner
-// approves or declines.
+// suggestions, rename), "suggester" (only suggestions; may add but not remove references), "viewer"
+// ("Lesen": read only; sees comments but writes none).
+// Logged-in users can request access to a document, or more rights than they have; the owner approves or
+// declines. Admins can switch off per account: creating documents, requesting rights, seeing titles of others.
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { db } from './db.js';
 
-export const ROLES = ['editor', 'suggester'];
-const RANK = { suggester: 1, editor: 2, owner: 3 };
+export const ROLES = ['editor', 'suggester', 'viewer'];
+const REQUEST_ROLES = ['editor', 'suggester'];
+const RANK = { viewer: 1, suggester: 2, editor: 3, owner: 4 };
 export const STATUSES = ['idea', 'wip', 'finished', 'archived'];
 
 const docExists = (docId) => !!db.prepare('SELECT 1 FROM documents WHERE id = ? AND deleted_at IS NULL').get(docId);
@@ -58,6 +60,7 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
 
   // Documents of others without access: titles are visible to every account, contents only after sharing.
   router.get('/discover', (req, res) => {
+    if (!req.user.seeOthers) return res.json([]);
     res.json(db.prepare(`
       SELECT d.id, d.title, d.status, d.updated_at, u.name AS owner, r.role AS requested
       FROM documents d
@@ -69,6 +72,7 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
   });
 
   router.post('/', (req, res) => {
+    if (!req.user.canCreate) return res.status(403).json({ error: 'Du darfst keine neuen Dokumente anlegen' });
     const id = randomUUID();
     const now = Date.now();
     const title = String(req.body?.title || 'Unbenanntes Dokument').slice(0, 200);
@@ -141,19 +145,23 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
 
   // --- Access requests ------------------------------------------------------
 
-  // Own request: title, owner, current role (or null) and the pending request.
+  // Own request: title, owner, current role (or null), the pending request and whether requesting is allowed.
+  // Without access and without "see others", the document stays hidden.
   router.get('/:id/request', (req, res) => {
     const doc = db.prepare(`SELECT d.title, u.name AS owner FROM documents d LEFT JOIN users u ON u.id = d.owner_id
       WHERE d.id = ? AND d.deleted_at IS NULL`).get(req.params.id);
-    if (!doc) return res.status(404).json({ error: 'Nicht gefunden' });
-    res.json({ ...doc, role: roleFor(req.user.id, req.params.id), pending: pendingRequest(req.params.id, req.user.id) });
+    const role = doc ? roleFor(req.user.id, req.params.id) : null;
+    if (!doc || (!role && !req.user.seeOthers)) return res.status(404).json({ error: 'Nicht gefunden' });
+    res.json({ ...doc, role, pending: pendingRequest(req.params.id, req.user.id), canRequest: req.user.canRequest });
   });
 
   router.put('/:id/request', (req, res) => {
     const role = req.body?.role;
-    if (!ROLES.includes(role)) return res.status(400).json({ error: 'Unbekannte Rolle' });
+    if (!REQUEST_ROLES.includes(role)) return res.status(400).json({ error: 'Unbekannte Rolle' });
     if (!docExists(req.params.id)) return res.status(404).json({ error: 'Nicht gefunden' });
     const current = roleFor(req.user.id, req.params.id);
+    if (!current && !req.user.seeOthers) return res.status(404).json({ error: 'Nicht gefunden' });
+    if (!req.user.canRequest) return res.status(403).json({ error: 'Du darfst keine Rechte beantragen' });
     if (current && RANK[current] >= RANK[role]) return res.status(400).json({ error: 'Diese Rechte hast du bereits' });
     db.prepare(`INSERT INTO access_requests (doc_id, user_id, role, created_at) VALUES (?, ?, ?, ?)
       ON CONFLICT(doc_id, user_id) DO UPDATE SET role = excluded.role`).run(req.params.id, req.user.id, role, Date.now());
@@ -186,7 +194,7 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
   router.put('/:id/requests/:userId', access('owner'), (req, res) => {
     const userId = Number(req.params.userId);
     const { role, created_at: createdAt } = req.body || {};
-    if (!ROLES.includes(role)) return res.status(400).json({ error: 'Unbekannte Rolle' });
+    if (!REQUEST_ROLES.includes(role)) return res.status(400).json({ error: 'Unbekannte Rolle' });
     if (!db.prepare('SELECT 1 FROM users WHERE id = ?').get(userId) || userId === req.user.id) {
       return res.status(400).json({ error: 'Ungültige Person' });
     }

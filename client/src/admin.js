@@ -51,6 +51,14 @@ async function load() {
 
     const actions = document.createElement('td');
     actions.className = 'text-nowrap';
+    const perm = document.createElement('button');
+    perm.type = 'button';
+    perm.className = 'btn btn-ghost-secondary btn-icon';
+    perm.setAttribute('aria-label', t('Berechtigungen von {name}', { name: u.name }));
+    perm.title = t('Berechtigungen');
+    perm.innerHTML = '<i class="ti ti-lock-access"></i>';
+    perm.addEventListener('click', () => openPermissions(u));
+    actions.append(perm);
     const pw = document.createElement('button');
     pw.type = 'button';
     pw.className = 'btn btn-ghost-secondary btn-icon';
@@ -107,6 +115,123 @@ $('pw-form').addEventListener('submit', async (e) => {
     $('pw-error').textContent = err.message;
   }
 });
+
+// --- Permissions of one person ---
+
+const ROLE_LABELS = { '': t('Kein Zugriff'), viewer: t('Lesen'), suggester: t('Vorschlagen'), editor: t('Bearbeiten') };
+const PERMISSIONS = [
+  ['canCreate', t('Neue Dokumente anlegen'), t('Auch „Word importieren“ in der Dokumentliste.')],
+  ['canRequest', t('Rechte beantragen'), t('Zugriff auf fremde Dokumente oder „Bearbeiten“ statt „Vorschlagen“ beantragen.')],
+  ['seeOthers', t('Fremde Dokumente in der Liste sehen'), t('Titel und Eigentümer:in unter „Weitere Dokumente“, ohne Inhalt.')],
+];
+const permDialog = $('perm-dialog');
+let permDocs = [];
+let permUser = null;
+
+async function openPermissions(u) {
+  permUser = u;
+  $('perm-title').textContent = t('Berechtigungen von {name}', { name: u.name });
+  $('perm-switches').replaceChildren(...PERMISSIONS.map(([field, label, hint]) => {
+    const wrap = document.createElement('label');
+    wrap.className = 'form-check form-switch mb-2';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.className = 'form-check-input';
+    box.checked = u[field];
+    box.addEventListener('change', async () => {
+      try {
+        await api(`/api/admin/users/${u.id}`, { method: 'PATCH', body: { [field]: box.checked } });
+        u[field] = box.checked;
+        toast(t(box.checked ? '{name} darf jetzt: {what}' : '{name} darf nicht mehr: {what}', { name: u.name, what: label }));
+      } catch (err) {
+        box.checked = !box.checked;
+        toast(err.message);
+      }
+    });
+    const text = document.createElement('span');
+    text.className = 'form-check-label';
+    text.textContent = label;
+    const small = document.createElement('span');
+    small.className = 'form-check-description';
+    small.textContent = hint;
+    wrap.append(box, text, small);
+    return wrap;
+  }));
+  $('perm-filter').value = '';
+  permDocs = await api(`/api/admin/users/${u.id}/docs`);
+  renderPermDocs();
+  if (!permDialog.open) permDialog.showModal();
+}
+
+function renderPermDocs() {
+  const self = permUser.id === me.id;
+  const q = $('perm-filter').value.trim().toLowerCase();
+  const shown = permDocs.filter((d) => d.title.toLowerCase().includes(q));
+  const rows = shown.map((d) => {
+    const li = document.createElement('li');
+    const title = document.createElement('span');
+    title.className = 'perm-doc-title';
+    title.textContent = d.title;
+    const owner = document.createElement('span');
+    owner.className = 'd-block text-secondary small';
+    owner.textContent = d.role === 'owner' ? t('gehört {name}', { name: permUser.name }) : t('von {owner}', { owner: d.owner || '–' });
+    title.append(owner);
+    li.append(title);
+    if (d.role === 'owner') {
+      const badge = document.createElement('span');
+      badge.className = 'text-secondary small';
+      badge.textContent = t('Eigentümer:in');
+      li.append(badge);
+      return li;
+    }
+    const select = document.createElement('select');
+    select.className = 'form-select form-select-sm';
+    select.disabled = self; // Admins do not open documents of others this way.
+    select.setAttribute('aria-label', t('Rolle von {name} in „{title}“', { name: permUser.name, title: d.title }));
+    for (const [value, label] of Object.entries(ROLE_LABELS)) select.append(new Option(label, value, false, value === (d.role || '')));
+    select.addEventListener('change', () => setDocRole(d, select.value || null, select));
+    li.append(select);
+    return li;
+  });
+  if (!rows.length) {
+    const li = document.createElement('li');
+    li.className = 'text-secondary';
+    li.textContent = t(permDocs.length ? 'Kein Dokument gefunden.' : 'Es gibt noch keine Dokumente.');
+    rows.push(li);
+  }
+  $('perm-docs').replaceChildren(...rows);
+  $('perm-docs-hint').hidden = self;
+  if (self) {
+    const note = document.createElement('li');
+    note.className = 'text-secondary small';
+    note.textContent = t('Deine eigenen Zugriffe vergibt die Eigentümer:in.');
+    $('perm-docs').prepend(note);
+  }
+}
+
+async function setDocRole(doc, role, select) {
+  const previous = doc.role;
+  try {
+    await api(`/api/admin/users/${permUser.id}/docs/${doc.id}`, { method: 'PUT', body: { role } });
+    doc.role = role;
+    const user = permUser;
+    toast(role ? t('{name}: „{role}“ in „{title}“', { name: user.name, role: ROLE_LABELS[role], title: doc.title })
+      : t('{name} hat keinen Zugriff mehr auf „{title}“', { name: user.name, title: doc.title }), {
+      actionLabel: t('Rückgängig'),
+      onAction: async () => {
+        await api(`/api/admin/users/${user.id}/docs/${doc.id}`, { method: 'PUT', body: { role: previous } });
+        doc.role = previous;
+        if (permDialog.open && permUser === user) renderPermDocs();
+      },
+    });
+  } catch (err) {
+    select.value = previous || '';
+    toast(err.message);
+  }
+}
+
+$('perm-filter').addEventListener('input', renderPermDocs);
+permDialog.addEventListener('close', load);
 
 const form = $('new-user-form');
 form.addEventListener('submit', async (e) => {

@@ -41,8 +41,13 @@ try {
   await new Promise(() => {});
 }
 const myColor = colorFor(me.name);
-const role = meta.role; // owner | editor | suggester
-const canEdit = role !== 'suggester';
+const role = meta.role; // owner | editor | suggester | viewer
+const canEdit = role === 'owner' || role === 'editor';
+const readOnly = role === 'viewer'; // "Lesen": no changes, no comments
+if (readOnly) {
+  // The server ignores changes from this connection anyway; these controls would only mislead.
+  document.querySelectorAll('#toolbar, .autosave-switch, #refs-add, #refs-manual').forEach((node) => { node.hidden = true; });
+}
 
 // --- Title ------------------------------------------------------------------
 
@@ -213,6 +218,7 @@ const editor = new Editor({
     CommentHighlight,
     ImageUpload.configure({ docId }),
   ],
+  editable: !readOnly,
   editorProps: { attributes: { class: 'prose', spellcheck: 'true', lang: 'de' } },
 });
 
@@ -604,16 +610,16 @@ docxInput.addEventListener('change', () => {
 
 review = setupReview({ editor, role, docId, onModeChange: updateToolbar });
 setupSharing({ docId, role, provider });
-const comments = setupComments({ editor, docId, me, canEdit, provider });
-setupSelectionMenu({ editor, onComment: () => comments.start() });
+const comments = setupComments({ editor, docId, me, canEdit, canComment: !readOnly, provider });
+setupSelectionMenu({ editor, readOnly, onComment: () => comments.start() });
 // Ctrl+Alt+M adds a comment, as in Google Docs.
 document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.altKey && e.code === 'KeyM') {
+  if (!readOnly && (e.ctrlKey || e.metaKey) && e.altKey && e.code === 'KeyM') {
     e.preventDefault();
     comments.start();
   }
 });
-if (role === 'suggester') setupEditRequest(docId);
+if ((role === 'suggester' || role === 'viewer') && me.canRequest) setupEditRequest(docId, role);
 editor.on('suggestionBlocked', () => {
   toast(t('Listen, Zitatblöcke und Tabellen lassen sich nicht als Vorschlag ändern.'));
 });

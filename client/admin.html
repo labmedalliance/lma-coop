@@ -64,11 +64,29 @@
             </div>
           </form>
         </div>
-        <p class="text-secondary small mt-3">Admins verwalten Konten und Rollen. Dokumente sehen sie nur, wenn sie
-          ihnen gehören oder freigegeben wurden. Beim Löschen einer Person gehen ihre Dokumente an dich über.</p>
+        <p class="text-secondary small mt-3">Admins verwalten Konten, Rollen und Berechtigungen. Dokumente öffnen sie
+          nur, wenn sie ihnen gehören oder freigegeben wurden. Beim Löschen einer Person gehen ihre Dokumente an dich über.</p>
       </div>
     </div>
   </div>
+
+  <dialog class="cite-dialog perm-dialog" id="perm-dialog" aria-labelledby="perm-title">
+    <form method="dialog">
+      <h2 class="h3" id="perm-title">Berechtigungen</h2>
+      <h3 class="h4 mb-2">Konto</h3>
+      <div class="perm-switches" id="perm-switches"></div>
+      <h3 class="h4 mt-3 mb-1">Dokumente</h3>
+      <p class="text-secondary small mb-2" id="perm-docs-hint">Welche Dokumente darf die Person öffnen, und mit welcher
+        Rolle? <strong>Lesen</strong>: nur ansehen. <strong>Vorschlagen</strong>: Änderungen als Vorschlag.
+        <strong>Bearbeiten</strong>: direkt ändern.</p>
+      <input class="form-control mb-2" id="perm-filter" type="search" placeholder="Dokument suchen …"
+        aria-label="Dokumente durchsuchen">
+      <ul class="perm-docs" id="perm-docs"></ul>
+      <div class="d-flex justify-content-end mt-3">
+        <button class="btn" value="close" type="submit">Schließen</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog class="cite-dialog" id="pw-dialog" aria-labelledby="pw-title">
     <form method="dialog" id="pw-form">

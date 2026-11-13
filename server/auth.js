@@ -60,9 +60,12 @@ export function userFromCookieHeader(header) {
   const token = sessionToken(header);
   if (!token) return null;
   const row = db.prepare(`
-    SELECT u.id, u.username, u.name, u.is_admin FROM sessions s JOIN users u ON u.id = s.user_id
+    SELECT u.id, u.username, u.name, u.is_admin, u.can_create, u.can_request, u.see_others FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token = ? AND s.expires_at > ?`).get(token, Date.now());
-  return row ? { id: row.id, username: row.username, name: row.name, isAdmin: row.is_admin === 1 } : null;
+  return row ? {
+    id: row.id, username: row.username, name: row.name, isAdmin: row.is_admin === 1,
+    canCreate: row.can_create === 1, canRequest: row.can_request === 1, seeOthers: row.see_others === 1,
+  } : null;
 }
 
 // At most 10 failed logins per IP within 15 minutes.

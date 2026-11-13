@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Janne Cadamuro / LabMed Alliance Inc. — see LICENSE and NOTICE
 // Images in documents: upload and delivery.
 //
-// Everyone with access to the document may upload, also "suggest only" users (they suggest images).
+// Everyone who may change the document may upload, also "suggest only" users (they suggest images), not "Lesen".
 // The type is taken from the file content, not from the browser: only PNG, JPEG, GIF and WebP.
 // SVG is not accepted, because it can carry scripts.
 import { randomUUID } from 'node:crypto';
@@ -29,11 +29,14 @@ export function imagesRouter() {
   const router = Router({ mergeParams: true });
 
   router.use((req, res, next) => {
-    if (!roleFor(req.user.id, req.params.id)) return res.status(404).json({ error: 'Nicht gefunden' });
+    req.role = roleFor(req.user.id, req.params.id);
+    if (!req.role) return res.status(404).json({ error: 'Nicht gefunden' });
     next();
   });
 
-  router.post('/', express.raw({ type: () => true, limit: MAX_IMAGE_BYTES }), (req, res) => {
+  const mayUpload = (req, res, next) => (req.role === 'viewer' ? res.status(403).json({ error: 'Keine Berechtigung' }) : next());
+
+  router.post('/', mayUpload, express.raw({ type: () => true, limit: MAX_IMAGE_BYTES }), (req, res) => {
     const data = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
     const mime = sniffImageType(data);
     if (!mime) return res.status(415).json({ error: 'Nur PNG, JPEG, GIF oder WebP möglich' });

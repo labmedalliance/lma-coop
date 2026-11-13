@@ -169,7 +169,8 @@
     <form method="dialog">
       <h2 class="h3" id="share-title">Freigeben</h2>
       <p class="text-secondary small mb-2">Wer darf dieses Dokument sehen? <strong>Bearbeiten</strong> ändert direkt und
-        nimmt Vorschläge an. <strong>Vorschlagen</strong> darf nur Änderungen vorschlagen.</p>
+        nimmt Vorschläge an. <strong>Vorschlagen</strong> darf nur Änderungen vorschlagen. <strong>Lesen</strong> darf
+        nur lesen.</p>
       <div class="request-section" id="request-section" hidden>
         <h3 class="h4 mb-1">Anträge</h3>
         <ul class="member-list" id="request-list"></ul>
@@ -180,6 +181,7 @@
         <select class="form-select" id="share-role" aria-label="Rolle">
           <option value="editor">Bearbeiten</option>
           <option value="suggester">Vorschlagen</option>
+          <option value="viewer">Lesen</option>
         </select>
         <button class="btn btn-primary" id="share-add-btn" type="button">Hinzufügen</button>
       </div>

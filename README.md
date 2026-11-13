@@ -60,11 +60,12 @@ Ein neues Dokument sieht nur die Person, die es anlegt. Über **Freigeben** gibt
 | Eigentümer:in | alles, inkl. Freigeben und Löschen |
 | Bearbeiten | direkt ändern, umbenennen, Vorschläge annehmen oder ablehnen, Quellen bearbeiten und entfernen |
 | Vorschlagen | nur Änderungen vorschlagen; Quellen hinzufügen, aber nicht bearbeiten oder entfernen |
+| Lesen | nur lesen, auch Kommentare und Vorschläge ansehen; nichts ändern, nicht kommentieren |
 
 **Zugriff beantragen:** Die Dokumentliste zeigt unter **Weitere Dokumente** Titel und Eigentümer:in aller
 Dokumente, auf die du keinen Zugriff hast. Die Inhalte bleiben bis zur Freigabe gesperrt. Ein Klick auf so ein
 Dokument (oder ein geteilter Link) öffnet die Antragsseite: dort **Vorschlagen** oder **Bearbeiten** beantragen. Wer nur vorschlagen darf, beantragt über **Bearbeiten beantragen** in der Kopfzeile mehr
-Rechte. Die Eigentümer:in sieht offene Anträge als Zahl am Knopf **Freigeben**, als Hinweis im geöffneten Dokument
+Rechte; wer nur lesen darf, beantragt so **Vorschlagen**. Die Eigentümer:in sieht offene Anträge als Zahl am Knopf **Freigeben**, als Hinweis im geöffneten Dokument
 und in der Dokumentliste. Im Freigabe-Dialog nimmt sie an (Rolle wählbar) oder lehnt ab, beides mit „Rückgängig".
 Nach dem Annehmen öffnet sich das Dokument bei der antragstellenden Person von selbst.
 
@@ -80,8 +81,21 @@ Browser lädt neu.
 Grenzen im Vorschlagsmodus: Listen, Zitatblöcke und Tabellen lassen sich nicht als Vorschlag anlegen oder umbauen,
 nur direkt bearbeiten. Die verwendete Bibliothek kann solche Vorschläge nicht zuverlässig zurücknehmen.
 
-**Admins** verwalten unter `/admin` Konten: anlegen, Passwort zurücksetzen, Admin-Rolle vergeben, löschen. Dokumente
-anderer sehen sie nur nach Freigabe. Beim Löschen einer Person gehen ihre Dokumente an den löschenden Admin. Das
+Bei „Lesen" ignoriert der Server jede Änderung aus dieser Verbindung (Hocuspocus `readOnly`). Kommentare und Bilder
+lehnt er mit 403 ab.
+
+**Admins** verwalten unter `/admin` Konten: anlegen, Passwort zurücksetzen, Admin-Rolle vergeben, löschen. Das
+Schlüsselsymbol **Berechtigungen** öffnet pro Person:
+
+| Einstellung | Wirkung |
+|---|---|
+| Neue Dokumente anlegen | aus: kein **Neues Dokument** und kein **Word importieren** |
+| Rechte beantragen | aus: keine Zugriffsanträge und kein „… beantragen" im Dokument |
+| Fremde Dokumente in der Liste sehen | aus: keine **Weitere Dokumente**; fremde Links zeigen „Dokument nicht gefunden" |
+| Dokumente | pro Dokument **Kein Zugriff**, **Lesen**, **Vorschlagen** oder **Bearbeiten**, mit „Rückgängig" |
+
+Alle Einstellungen sind standardmäßig an. Der Server setzt sie durch. Eigene Zugriffe vergibt ein Admin hier nicht:
+Dokumente anderer sehen Admins nur nach Freigabe durch die Eigentümer:in. Beim Löschen einer Person gehen ihre Dokumente an den löschenden Admin. Das
 erste Konto ist automatisch Admin.
 
 ## Kommentare

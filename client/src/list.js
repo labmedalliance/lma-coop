@@ -12,9 +12,12 @@ const filter = document.getElementById('filter');
 const stateFilter = document.getElementById('state-filter');
 let docs = [];
 let others = [];
+let canRequest = true;
 
 const dateFmt = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
-const ROLE_BADGES = { editor: [t('Bearbeiten'), 'bg-blue-lt'], suggester: [t('Vorschlagen'), 'bg-orange-lt'] };
+const ROLE_BADGES = {
+  editor: [t('Bearbeiten'), 'bg-blue-lt'], suggester: [t('Vorschlagen'), 'bg-orange-lt'], viewer: [t('Lesen'), 'bg-secondary-lt'],
+};
 
 // "active" hides archived documents; "all" shows everything; otherwise exactly that status.
 function matches(d, q) {
@@ -92,9 +95,9 @@ function renderOthers(q) {
       action.className = 'badge bg-yellow-lt d-inline-block mt-2';
       action.textContent = t('Beantragt · {role}', { role: ROLE_BADGES[d.requested][0] });
     } else {
-      action.className = 'd-inline-block mt-2 small text-primary';
+      action.className = `d-inline-block mt-2 small ${canRequest ? 'text-primary' : 'text-secondary'}`;
       action.innerHTML = '<i class="ti ti-lock me-1"></i>';
-      action.append(t('Zugriff beantragen'));
+      action.append(t(canRequest ? 'Zugriff beantragen' : 'Kein Zugriff'));
     }
     const state = statusBadge(d.status);
     link.append(title, meta, ...(state ? [state] : []), action);
@@ -163,8 +166,13 @@ try {
   if (saved && [...stateFilter.options].some((o) => o.value === saved)) stateFilter.value = saved;
 } catch { /* storage blocked */ }
 
-api('/api/me').then((me) => {
+// Admins can take away creating documents and requesting rights; the server enforces both.
+const meLoaded = api('/api/me').then((me) => {
   document.getElementById('me-name').textContent = me.name;
   document.getElementById('admin-link').hidden = !me.isAdmin;
+  document.getElementById('new-doc-btn').hidden = !me.canCreate;
+  document.getElementById('import-btn').hidden = !me.canCreate;
+  document.getElementById('empty-create-hint').hidden = !me.canCreate;
+  canRequest = me.canRequest;
 });
-load();
+meLoaded.finally(load);
