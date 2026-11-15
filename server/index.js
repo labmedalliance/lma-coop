@@ -14,11 +14,11 @@ import {
   isRateLimited, recordFailure, clearFailures,
 } from './auth.js';
 import { lookup } from './cite.js';
-import { docsRouter, roleFor } from './docs.js';
+import { docsRouter, roleFor, purgeDeleted } from './docs.js';
 import { adminRouter } from './admin.js';
 import { commentsRouter } from './comments.js';
 import { imagesRouter, imageUploadErrors } from './images.js';
-import { filesRouter, newFileRoute, fileUploadErrors, purgeDeletedFiles } from './files.js';
+import { filesRouter, newFileRoute, fileUploadErrors } from './files.js';
 import { isSuggestionOnly } from './suggestion-guard.js';
 
 const PORT = Number(process.env.PORT || 5200);
@@ -218,10 +218,10 @@ server.on('upgrade', (req, socket, head) => {
 // Keeps idle but healthy connections alive.
 setInterval(() => wss.clients.forEach((ws) => ws.ping()), 10_000).unref();
 
-// Deleted files go for good after 30 days (data protection); checked at start and once a day.
+// Deleted documents and files go for good after 30 days (data protection); checked at start and once a day.
 const purge = () => {
-  const removed = purgeDeletedFiles();
-  if (removed) console.log(`Removed ${removed} deleted file(s) for good`);
+  const removed = purgeDeleted();
+  if (removed) console.log(`Removed ${removed} deleted document(s) for good`);
 };
 purge();
 setInterval(purge, 86400_000).unref();

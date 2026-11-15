@@ -44,7 +44,7 @@ Zusatzfunktion für Publikationen: eine **Literaturliste pro Dokument**. Du füg
   oder über **Tags verwalten**, wo sie Tags auch umbenennen und löschen. Umbenennen und Löschen wirken auf alle
   Dokumente. Die Liste zeigt die Tags auf jeder Karte, filtert über **Alle Tags** und findet Dokumente auch über die
   Suche nach einem Tag
-- Login mit Benutzerkonten, Dokumentliste mit Suche, Löschen nur durch die Eigentümer:in, mit Rückfrage „Bist du sicher?" und „Rückgängig"
+- Login mit Benutzerkonten, Dokumentliste mit Suche, Löschen nur durch die Eigentümer:in, mit Rückfrage „Bist du sicher?" und „Rückgängig". Nach 30 Tagen entfernt der Server Gelöschtes endgültig
 - Freigabe pro Dokument mit Rollen, Vorschlagsmodus (Änderungen nachverfolgen), Benutzerverwaltung für Admins
 - Kommentare wie in Google Docs, im Bearbeiten- und im Vorschlagsmodus (siehe unten)
 - Bilder (PNG, JPEG, GIF, WebP, bis 10 MB): Knopf **Bild einfügen**, aus der Zwischenablage einfügen (z. B.
@@ -83,8 +83,8 @@ Grenzen gegen volle Platten und zum Datenschutz:
 - höchstens 25 MB pro Datei
 - höchstens 500 MB pro Person, gezählt über alle selbst hochgeladenen Versionen (`FILE_QUOTA_MB`)
 - höchstens 30 Uploads pro Person und Stunde, höchstens 3 Übertragungen gleichzeitig (`FILE_MAX_TRANSFERS`)
-- Gelöschte Dateien entfernt der Server nach 30 Tagen endgültig, samt allen Versionen. Bis dahin lassen sie sich
-  wiederherstellen
+- Gelöschte Dateien und Dokumente entfernt der Server nach 30 Tagen endgültig, samt Versionen, Bildern und
+  Kommentaren
 - Wer ohne Zugriff unter **Weitere Dokumente** eine Datei sieht, erfährt nur den Dateityp, nicht den Dateinamen
 
 | Rolle | Darf bei Dateien |

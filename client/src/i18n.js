@@ -499,8 +499,8 @@ export const EN = {
   'Textdokument': 'Text document',
   'Excel-, PowerPoint- oder andere Datei mit Versionen ablegen. Keine Patientendaten.':
     'Store an Excel, PowerPoint or other file with versions. No patient data.',
-  'Keine Patientendaten hochladen, höchstens pseudonymisiert oder anonymisiert. Gelöschte Dateien entfernt LMA Coop nach 30 Tagen endgültig.':
-    'Do not upload patient data, at most pseudonymised or anonymised. LMA Coop removes deleted files for good after 30 days.',
+  'Keine Patientendaten hochladen, höchstens pseudonymisiert oder anonymisiert. Gelöschtes entfernt LMA Coop nach 30 Tagen endgültig.':
+    'Do not upload patient data, at most pseudonymised or anonymised. LMA Coop removes deleted items for good after 30 days.',
   'Keine Patientendaten hochladen, höchstens pseudonymisiert oder anonymisiert.': 'Do not upload patient data, at most pseudonymised or anonymised.',
   'Dein Speicherplatz für Dateien ist voll (höchstens {mb} MB). Bitte die Eigentümer:in, alte Versionen zu löschen.':
     'Your storage for files is full (at most {mb} MB). Ask the owner to delete old versions.',

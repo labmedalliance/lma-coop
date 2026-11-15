@@ -95,6 +95,20 @@ function setTags(docId, names) {
   return tagsOf(docId);
 }
 
+export const PURGE_AFTER_DAYS = 30;
+
+/**
+ * Removes deleted documents and files for good once they have been deleted for PURGE_AFTER_DAYS (data protection).
+ * Versions, images, comments, members, requests and tags go with them via ON DELETE CASCADE. Afterwards VACUUM
+ * gives the space back. Returns the number of removed entries.
+ */
+export function purgeDeleted(now = Date.now()) {
+  const before = now - PURGE_AFTER_DAYS * 86400_000;
+  const removed = db.prepare('DELETE FROM documents WHERE deleted_at IS NOT NULL AND deleted_at < ?').run(before).changes;
+  if (removed) db.exec('VACUUM');
+  return removed;
+}
+
 /** Role of the user in the document, or null without access (also for deleted documents). */
 export function roleFor(userId, docId) {
   const doc = db.prepare('SELECT owner_id FROM documents WHERE id = ? AND deleted_at IS NULL').get(docId);
@@ -197,7 +211,7 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
     res.json({ ok: true });
   });
 
-  // Soft delete, so the list can offer "Rückgängig".
+  // Soft delete, so the list can offer "Rückgängig". After 30 days purgeDeleted() removes it for good.
   router.delete('/:id', access('owner'), (req, res) => {
     db.prepare('UPDATE documents SET deleted_at = ? WHERE id = ?').run(Date.now(), req.params.id);
     onAccessChange({ docId: req.params.id });

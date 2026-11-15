@@ -17,8 +17,8 @@
 // The owner can delete old versions (not the current one), e.g. a version with personal data by mistake.
 //
 // Limits against filling the disk: 25 MB per file, a storage quota per person (FILE_QUOTA_MB, default 500 MB,
-// counted over the versions they uploaded) and at most 30 uploads per person and hour. Deleted files are removed
-// for good 30 days after deletion (purgeDeletedFiles, run at start and daily).
+// counted over the versions they uploaded) and at most 30 uploads per person and hour. Deleted documents and files
+// are removed for good after 30 days (purgeDeleted in server/docs.js).
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import express, { Router } from 'express';
@@ -30,7 +30,6 @@ const QUOTA_BYTES = Number(process.env.FILE_QUOTA_MB || 500) * 1024 * 1024;
 const UPLOADS_PER_HOUR = 30;
 // At most this many file uploads and downloads at the same time: each holds up to 25 MB (or more) in memory.
 const MAX_TRANSFERS = Number(process.env.FILE_MAX_TRANSFERS || 3);
-export const PURGE_AFTER_DAYS = 30;
 const MAX_NOTE = 500;
 const CHANGE_ROLES = ['owner', 'editor'];
 
@@ -122,18 +121,6 @@ function uploadLimits(req, res, next) {
     return res.status(413).json({ error: 'Dein Speicherplatz für Dateien ist voll', code: 'quota', quotaMb: QUOTA_BYTES / 1024 / 1024 });
   }
   next();
-}
-
-/**
- * Removes deleted files for good once they have been deleted for PURGE_AFTER_DAYS (versions go with them via
- * ON DELETE CASCADE), then gives the space back. Returns the number of removed files.
- */
-export function purgeDeletedFiles(now = Date.now()) {
-  const before = now - PURGE_AFTER_DAYS * 86400_000;
-  const removed = db.prepare("DELETE FROM documents WHERE kind = 'file' AND deleted_at IS NOT NULL AND deleted_at < ?")
-    .run(before).changes;
-  if (removed) db.exec('VACUUM');
-  return removed;
 }
 
 /** Owner and "Bearbeiten" always download; others only if the owner allows it for them. */
