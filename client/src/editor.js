@@ -543,7 +543,8 @@ $('print').addEventListener('click', () => window.print());
 async function importWord(file) {
   toast(t('Word-Datei wird importiert …'), { timeout: 2500 });
   const { parseDocx } = await import('./import-docx.js');
-  const result = parseDocx(new Uint8Array(await file.arrayBuffer()));
+  const placeholder = (kind, format) => `[${kind === 'chart' ? t('Diagramm nicht übernommen') : t('Bild nicht übernommen ({format})', { format })}]`;
+  const result = parseDocx(new Uint8Array(await file.arrayBuffer()), { placeholder });
   const { stats } = result;
   // Checked before anything is stored, so a file the editor cannot hold changes nothing.
   editor.schema.nodeFromJSON({ type: 'doc', content: result.content }).check();
@@ -560,7 +561,10 @@ async function importWord(file) {
   let images = 0;
   const fix = (nodes) => nodes.flatMap((n) => {
     if (n.type === 'image') {
-      if (!srcs.has(n.attrs.src)) return [];
+      if (!srcs.has(n.attrs.src)) {
+        const format = n.attrs.src.split('.').pop().toUpperCase();
+        return [{ type: 'text', text: placeholder('image', format), marks: [{ type: 'italic' }, ...(n.marks || [])] }];
+      }
       images++;
       return [{ ...n, attrs: { ...n.attrs, src: srcs.get(n.attrs.src) } }];
     }
@@ -598,7 +602,7 @@ async function importWord(file) {
     t('Word-Datei importiert: {changes} Änderungen, {comments} Kommentare, {citations} Zitate, {images} Bilder.', {
       changes: stats.changes, comments: stats.comments, citations: stats.citations, images,
     }),
-    lost && t('{n} Bilder fehlen (nur PNG, JPEG, GIF und WebP möglich).', { n: lost }),
+    lost && t('{n} Bilder oder Diagramme ließen sich nicht übernehmen (nur PNG, JPEG, GIF und WebP); im Text steht ein Platzhalter.', { n: lost }),
     stats.footnotes && t('Fußnoten werden nicht übernommen ({n}).', { n: stats.footnotes }),
   ].filter(Boolean).join(' '), { timeout: 10_000 });
 }

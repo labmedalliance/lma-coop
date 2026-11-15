@@ -8,10 +8,11 @@ import { BulletList, OrderedList, ListItem } from '@tiptap/extension-list';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
 import TextAlign from '@tiptap/extension-text-align';
-import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import { Table, TableRow } from '@tiptap/extension-table';
 import { Citation } from './citations.js';
 import { ImageNode } from './image-node.js';
 import { CommentMark } from './comment-mark.js';
+import { TextColor, Highlight, FormattedTableCell, FormattedTableHeader } from './format-marks.js';
 import { SuggestionMarks, SuggestionNodeMarksAttr } from './suggestions.js';
 
 // Block containers must allow suggestion marks on their children (e.g. a suggested new list item).
@@ -28,10 +29,12 @@ export const schemaExtensions = [
     link: { openOnClick: false, autolink: true },
   }),
   ...[Document, Blockquote, BulletList, OrderedList, ListItem].map(allowSuggestions),
-  ...[Table.configure({ resizable: false }), TableRow, TableCell, TableHeader].map(allowSuggestions),
+  ...[Table.configure({ resizable: false }), TableRow, FormattedTableCell, FormattedTableHeader].map(allowSuggestions),
   Subscript,
   Superscript,
   TextAlign.configure({ types: ['heading', 'paragraph'] }),
+  TextColor,
+  Highlight,
   Citation,
   ImageNode,
   CommentMark,

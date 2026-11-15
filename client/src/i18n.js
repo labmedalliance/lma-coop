@@ -489,7 +489,10 @@ export const EN = {
   'Word-Datei wird importiert …': 'Importing Word file …',
   'Word-Datei importiert: {changes} Änderungen, {comments} Kommentare, {citations} Zitate, {images} Bilder.':
     'Word file imported: {changes} changes, {comments} comments, {citations} citations, {images} images.',
-  '{n} Bilder fehlen (nur PNG, JPEG, GIF und WebP möglich).': '{n} images are missing (only PNG, JPEG, GIF and WebP possible).',
+  '{n} Bilder oder Diagramme ließen sich nicht übernehmen (nur PNG, JPEG, GIF und WebP); im Text steht ein Platzhalter.':
+    '{n} images or charts could not be imported (only PNG, JPEG, GIF and WebP); a placeholder marks each in the text.',
+  'Bild nicht übernommen ({format})': 'Image not imported ({format})',
+  'Diagramm nicht übernommen': 'Chart not imported',
   'Fußnoten werden nicht übernommen ({n}).': 'Footnotes are not imported ({n}).',
   'Keine gültige Word-Datei (.docx)': 'Not a valid Word file (.docx)',
 

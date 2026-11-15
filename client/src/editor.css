@@ -190,6 +190,25 @@
 
 .prose th { background: #f8fafc; font-weight: 600; }
 .prose td p, .prose th p { margin: 0; }
+/* Word tables keep their column widths; a table whose content needs more room scrolls sideways
+   instead of running off the page. */
+.prose .tableWrapper { overflow-x: auto; max-width: 100%; }
+
+/* Cell borders from Word (data-borders: sides with a line). Sides without a line get a faint dotted guide
+   while editing; with collapsed borders a solid line always wins over a dotted one. */
+.prose td[data-borders], .prose th[data-borders] { border: 1px dotted #e2e8f0; }
+.prose td[data-borders*="t"], .prose th[data-borders*="t"] { border-top: 1px solid #334155; }
+.prose td[data-borders*="r"], .prose th[data-borders*="r"] { border-right: 1px solid #334155; }
+.prose td[data-borders*="b"], .prose th[data-borders*="b"] { border-bottom: 1px solid #334155; }
+.prose td[data-borders*="l"], .prose th[data-borders*="l"] { border-left: 1px solid #334155; }
+.prose mark[data-highlight] { color: inherit; padding: 0; }
+@media print {
+  .prose td[data-borders], .prose th[data-borders] { border-style: none; }
+  .prose td[data-borders*="t"], .prose th[data-borders*="t"] { border-top-style: solid; }
+  .prose td[data-borders*="r"], .prose th[data-borders*="r"] { border-right-style: solid; }
+  .prose td[data-borders*="b"], .prose th[data-borders*="b"] { border-bottom-style: solid; }
+  .prose td[data-borders*="l"], .prose th[data-borders*="l"] { border-left-style: solid; }
+}
 .prose .selectedCell { background: #dbeafe; }
 
 .prose p.is-editor-empty:first-child::before {

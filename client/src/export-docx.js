@@ -4,7 +4,8 @@
 import {
   Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell,
   WidthType, ExternalHyperlink, LevelFormat, InsertedTextRun, DeletedTextRun,
-  CommentRangeStart, CommentRangeEnd, CommentReference, ImageRun, SimpleField,
+  CommentRangeStart, CommentRangeEnd, CommentReference, ImageRun, SimpleField, ShadingType, BorderStyle,
+  TableLayoutType,
 } from 'docx';
 import { citationLabel, formatReference } from './citations.js';
 import { toCsl } from './csl.js';
@@ -13,6 +14,49 @@ import { url } from './paths.js';
 
 const HEADINGS = { 1: HeadingLevel.HEADING_1, 2: HeadingLevel.HEADING_2, 3: HeadingLevel.HEADING_3 };
 const ALIGN = { center: AlignmentType.CENTER, right: AlignmentType.RIGHT, justify: AlignmentType.JUSTIFIED };
+// Word's highlight colours; other highlight colours are written as run shading.
+const HIGHLIGHTS = {
+  '#ffff00': 'yellow', '#00ff00': 'green', '#00ffff': 'cyan', '#ff00ff': 'magenta', '#0000ff': 'blue', '#ff0000': 'red',
+  '#000080': 'darkBlue', '#008080': 'darkCyan', '#008000': 'darkGreen', '#800080': 'darkMagenta', '#800000': 'darkRed',
+  '#808000': 'darkYellow', '#808080': 'darkGray', '#c0c0c0': 'lightGray', '#000000': 'black', '#ffffff': 'white',
+};
+const PX_TO_TWIPS = 15;
+const hexValue = (color) => (/^#[0-9a-f]{6}$/i.test(color || '') ? color.slice(1).toUpperCase() : null);
+
+/** Highlight and colour options of a text run. */
+function colorOptions(marks) {
+  const options = {};
+  if (hexValue(marks.textColor?.color)) options.color = hexValue(marks.textColor.color);
+  const highlight = marks.highlight?.color?.toLowerCase();
+  if (HIGHLIGHTS[highlight]) options.highlight = HIGHLIGHTS[highlight];
+  else if (hexValue(highlight)) options.shading = { type: ShadingType.CLEAR, color: 'auto', fill: hexValue(highlight) };
+  return options;
+}
+
+/** Cell options: background, the borders of cells with Word borders, and the column width. */
+function cellOptions(attrs = {}) {
+  const options = {};
+  const fill = hexValue(attrs.background);
+  if (fill) options.shading = { type: ShadingType.CLEAR, color: 'auto', fill };
+  if (typeof attrs.borders === 'string') {
+    const line = (side) => (attrs.borders.includes(side)
+      ? { style: BorderStyle.SINGLE, size: 4, color: '000000' } : { style: BorderStyle.NONE, size: 0, color: 'auto' });
+    options.borders = { top: line('t'), right: line('r'), bottom: line('b'), left: line('l') };
+  }
+  if (Array.isArray(attrs.colwidth) && attrs.colwidth.every((w) => w > 0)) {
+    options.width = { size: Math.round(attrs.colwidth.reduce((a, b) => a + b, 0) * PX_TO_TWIPS), type: WidthType.DXA };
+  }
+  return options;
+}
+
+/** Column widths in twips from the first row, if every column has one. */
+function columnWidths(table) {
+  const widths = (table.content?.[0]?.content || []).flatMap((cell) => {
+    const { colspan = 1, colwidth } = cell.attrs || {};
+    return Array.from({ length: colspan }, (_, i) => colwidth?.[i]);
+  });
+  return widths.length && widths.every((w) => w > 0) ? widths.map((w) => Math.round(w * PX_TO_TWIPS)) : null;
+}
 
 // Inline suggestions become Word tracked changes; set per export by exportDocx().
 let changes = { author: () => t('Unbekannt'), ids: new Map(), date: new Date().toISOString() };
@@ -176,6 +220,7 @@ function inlineRuns(n, numbers) {
     strike: !!marks.strike,
     superScript: !!marks.superscript,
     subScript: !!marks.subscript,
+    ...colorOptions(marks),
     style: marks.link ? 'Hyperlink' : undefined,
   }, marks);
   return marks.link ? [new ExternalHyperlink({ link: marks.link.href, children: [run] })] : [run];
@@ -204,17 +249,22 @@ function blocks(nodes = [], numbers, ctx = { list: null, level: 0, quote: false 
         }));
       case 'blockquote':
         return blocks(n.content, numbers, { ...ctx, quote: true });
-      case 'table':
+      case 'table': {
+        const widths = columnWidths(n);
         return [new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
+          ...(widths
+            ? { columnWidths: widths, width: { size: widths.reduce((a, b) => a + b, 0), type: WidthType.DXA }, layout: TableLayoutType.FIXED }
+            : { width: { size: 100, type: WidthType.PERCENTAGE } }),
           rows: (n.content || []).map((row) => new TableRow({
             children: (row.content || []).map((cell) => new TableCell({
               children: blocks(cell.content, numbers),
               columnSpan: cell.attrs?.colspan,
               rowSpan: cell.attrs?.rowspan,
+              ...cellOptions(cell.attrs),
             })),
           })),
         })];
+      }
       case 'horizontalRule':
         return [new Paragraph({ thematicBreak: true })];
       case 'codeBlock':

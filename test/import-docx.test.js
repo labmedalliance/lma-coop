@@ -143,7 +143,7 @@ test('reads EndNote and Word source citations', () => {
   assert.equal(formatReference(references[1].ref), 'Muster A. Word Buch. Stuttgart: Thieme; 2020.');
 });
 
-test('reads tables and images; skips image formats the editor cannot show', () => {
+test('reads tables and images; marks image formats the editor cannot show with a placeholder', () => {
   const drawing = (rel, cx) => `<w:r><w:drawing><wp:inline xmlns:wp="x"><wp:extent cx="${cx}" cy="100"/><wp:docPr id="1" name="Bild" descr="Abb. 1"/>`
     + `<a:graphic xmlns:a="y"><a:graphicData><pic:pic xmlns:pic="z"><pic:blipFill><a:blip r:embed="${rel}"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
   const cell = (text, tcPr = '') => `<w:tc>${tcPr ? `<w:tcPr>${tcPr}</w:tcPr>` : ''}${p(r(text))}</w:tc>`;
@@ -158,10 +158,95 @@ test('reads tables and images; skips image formats the editor cannot show', () =
   assert.equal(table.content[0].content[0].attrs.colspan, 2);
   assert.equal(table.content[1].content[0].attrs.rowspan, 2);
   assert.equal(table.content[2].content.length, 1);
-  assert.deepEqual(para.content.map((n) => n.attrs), [{ src: 'import:word/media/image1.png', alt: 'Abb. 1', width: 50 }]);
+  assert.deepEqual(para.content[0].attrs, { src: 'import:word/media/image1.png', alt: 'Abb. 1', width: 50 });
+  assert.equal(para.content[1].text, '[Bild nicht übernommen (EMF)]');
   assert.equal(images.length, 1);
   assert.equal(images[0].mime, 'image/png');
   assert.equal(stats.images, 2, 'counts every image, also those left out');
+});
+
+test('takes formatting from paragraph, character and default styles, colours and highlights', () => {
+  const styles = `<w:styles ${W}>
+    <w:docDefaults><w:rPrDefault><w:rPr><w:color w:val="000000"/></w:rPr></w:rPrDefault></w:docDefaults>
+    <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
+    <w:style w:type="paragraph" w:styleId="berschrift1"><w:name w:val="heading 1"/><w:rPr><w:b/><w:color w:val="2F5496"/></w:rPr></w:style>
+    <w:style w:type="paragraph" w:styleId="Wichtig"><w:name w:val="Wichtig"/><w:basedOn w:val="Normal"/><w:pPr><w:jc w:val="center"/></w:pPr><w:rPr><w:i/></w:rPr></w:style>
+    <w:style w:type="character" w:styleId="Fett"><w:name w:val="Strong"/><w:rPr><w:b/></w:rPr></w:style>
+    <w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="0563C1"/><w:u w:val="single"/></w:rPr></w:style>
+    </w:styles>`;
+  const { content } = parseDocx(docx([
+    p(r('Titel'), '<w:pStyle w:val="berschrift1"/>'),
+    p(r('kursiv') + r('fett', '<w:rStyle w:val="Fett"/>') + r('normal', '<w:i w:val="0"/>'), '<w:pStyle w:val="Wichtig"/>'),
+    p(r('rot', '<w:color w:val="FF0000"/>') + r('gelb', '<w:highlight w:val="yellow"/>') + r('grau', '<w:shd w:val="clear" w:color="auto" w:fill="D9D9D9"/>')
+      + r('schwarz', '<w:color w:val="000000"/>') + `<w:hyperlink r:id="rLink">${r('Link', '<w:rStyle w:val="Hyperlink"/>')}</w:hyperlink>`),
+  ].join(''), { 'word/styles.xml': styles }));
+  valid(content);
+  const marks = (node) => node.content.map((n) => [n.text, n.marks.map((m) => (m.attrs?.color ? `${m.type}:${m.attrs.color}` : m.type)).sort()]);
+  assert.deepEqual(marks(content[0]), [['Titel', []]], 'headings keep the editor look');
+  assert.equal(content[1].attrs.textAlign, 'center', 'alignment from the paragraph style');
+  assert.deepEqual(marks(content[1]), [['kursiv', ['italic']], ['fett', ['bold', 'italic']], ['normal', []]]);
+  assert.deepEqual(marks(content[2]), [
+    ['rot', ['textColor:#ff0000']], ['gelb', ['highlight:#ffff00']], ['grau', ['highlight:#d9d9d9']], ['schwarz', []],
+    ['Link', ['link']],
+  ]);
+});
+
+test('reads table formatting: column widths, cell background, borders and table style', () => {
+  const styles = `<w:styles ${W}>
+    <w:style w:type="table" w:styleId="Drei"><w:name w:val="Three lines"/>
+      <w:tblPr><w:tblBorders><w:top w:val="single"/><w:bottom w:val="single"/></w:tblBorders></w:tblPr>
+      <w:tblStylePr w:type="firstRow"><w:rPr><w:b/></w:rPr><w:tcPr><w:tcBorders><w:bottom w:val="single"/></w:tcBorders></w:tcPr></w:tblStylePr>
+    </w:style></w:styles>`;
+  const cell = (text, tcPr = '') => `<w:tc>${tcPr ? `<w:tcPr>${tcPr}</w:tcPr>` : ''}${p(r(text))}</w:tc>`;
+  const { content } = parseDocx(docx(
+    '<w:tbl><w:tblPr><w:tblStyle w:val="Drei"/><w:tblLook w:firstRow="1" w:noHBand="1" w:noVBand="1"/></w:tblPr>'
+      + '<w:tblGrid><w:gridCol w:w="3000"/><w:gridCol w:w="1500"/></w:tblGrid>'
+      + `<w:tr>${cell('Kopf')}${cell('Wert')}</w:tr>`
+      + `<w:tr>${cell('A', '<w:shd w:val="clear" w:color="auto" w:fill="FFF2CC"/>')}${cell('1')}</w:tr>`
+      + `<w:tr>${cell('B')}${cell('2', '<w:tcBorders><w:right w:val="single"/></w:tcBorders>')}</w:tr></w:tbl>`,
+    { 'word/styles.xml': styles },
+  ));
+  valid(content);
+  const [head, mid, last] = content[0].content.map((row) => row.content);
+  assert.deepEqual(head.map((c) => c.attrs.colwidth), [[200], [100]]);
+  assert.deepEqual(head.map((c) => c.attrs.borders), ['tb', 'tb']);
+  assert.deepEqual(mid.map((c) => c.attrs.borders), ['', '']);
+  assert.deepEqual(last.map((c) => c.attrs.borders), ['b', 'rb']);
+  assert.equal(mid[0].attrs.background, '#fff2cc');
+  assert.equal(mid[1].attrs.background, null);
+  assert.deepEqual(head[0].content[0].content[0].marks, [{ type: 'bold' }], 'header row bold from the table style');
+  assert.deepEqual(mid[0].content[0].content[0].marks, []);
+});
+
+test('finds pictures in chart fallbacks, groups, OLE objects and text boxes', () => {
+  const blip = (rel) => `<pic:pic xmlns:pic="z"><pic:blipFill><a:blip xmlns:a="y" r:embed="${rel}"/></pic:blipFill></pic:pic>`;
+  const chartEx = '<mc:AlternateContent xmlns:mc="m"><mc:Choice Requires="cx1"><w:drawing><wp:inline xmlns:wp="x"><a:graphic xmlns:a="y"><a:graphicData><cx:chart xmlns:cx="c" r:id="rC"/></a:graphicData></a:graphic></wp:inline></w:drawing></mc:Choice>'
+    + `<mc:Fallback><w:drawing><wp:inline xmlns:wp="x"><a:graphic xmlns:a="y"><a:graphicData>${blip('rImg')}</a:graphicData></a:graphic></wp:inline></w:drawing></mc:Fallback></mc:AlternateContent>`;
+  const chart = '<w:drawing><wp:inline xmlns:wp="x"><a:graphic xmlns:a="y"><a:graphicData><c:chart xmlns:c="c" r:id="rC"/></a:graphicData></a:graphic></wp:inline></w:drawing>';
+  const group = `<w:drawing><wp:anchor xmlns:wp="x"><a:graphic xmlns:a="y"><a:graphicData><wpg:wgp xmlns:wpg="g">${blip('rImg')}${blip('rImg2')}</wpg:wgp></a:graphicData></a:graphic></wp:anchor></w:drawing>`;
+  const ole = '<w:object><v:shape xmlns:v="v"><v:imagedata r:id="rImg2" o:title=""/></v:shape><o:OLEObject xmlns:o="o" r:id="rOle"/></w:object>';
+  const box = `<w:drawing><wp:anchor xmlns:wp="x"><a:graphic xmlns:a="y"><a:graphicData><wps:wsp xmlns:wps="s"><wps:txbx><w:txbxContent>${p(r('Im Kasten'))}`
+    + `<w:tbl><w:tr><w:tc>${p(r('Zelle'))}</w:tc></w:tr></w:tbl></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing>`;
+  const rels = '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + '<Relationship Id="rImg" Type="image" Target="media/image1.png"/><Relationship Id="rImg2" Type="image" Target="media/image3.jpeg"/></Relationships>';
+  const { content, images, stats } = parseDocx(docx([
+    p(`<w:r>${chartEx}</w:r>`),
+    p(`<w:r>${chart}</w:r>`),
+    p(`<w:r>${group}</w:r>`),
+    p(`<w:r>${ole}</w:r>`),
+    p(r('Vor dem Kasten') + `<w:r>${box}</w:r>` + r(' danach')),
+  ].join(''), { 'word/_rels/document.xml.rels': rels, 'word/media/image3.jpeg': new Uint8Array([255, 216]) }));
+  valid(content);
+  const srcs = (node) => node.content.filter((n) => n.type === 'image').map((n) => n.attrs.src);
+  assert.deepEqual(srcs(content[0]), ['import:word/media/image1.png'], 'chart fallback picture');
+  assert.equal(content[1].content[0].text, '[Diagramm nicht übernommen]');
+  assert.deepEqual(srcs(content[2]), ['import:word/media/image1.png', 'import:word/media/image3.jpeg'], 'every picture of a group');
+  assert.deepEqual(srcs(content[3]), ['import:word/media/image3.jpeg'], 'OLE preview');
+  assert.equal(texts(content[4]), 'Vor dem Kasten danach', 'the paragraph keeps its text');
+  assert.equal(texts(content[5]), 'Im Kasten');
+  assert.equal(content[6].type, 'table');
+  assert.equal(images.length, 2);
+  assert.equal(stats.images, 5);
 });
 
 test('rejects files that are not .docx', () => {
