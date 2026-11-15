@@ -112,9 +112,14 @@ export const EN = {
   'Unbekannter Tag. Neue Tags legt ein Admin an.': 'Unknown tag. An admin creates new tags.',
   'Tag: 1–40 Zeichen': 'Tag: 1–40 characters',
   'Diesen Tag gibt es schon': 'This tag already exists',
-  'Eine gemeinsame Liste für alle. Eigentümer:innen und Personen mit „Bearbeiten" wählen daraus Tags für ihre Dokumente. Umbenennen ändert den Tag in allen Dokumenten.':
-    'One shared list for everyone. Owners and people with “Edit” pick tags for their documents from it. Renaming changes the tag in all documents.',
   'Neuer Tag': 'New tag',
+  'Tags verwalten': 'Manage tags',
+  'Eine gemeinsame Liste für alle Dokumente. Umbenennen und Löschen wirken auf alle Dokumente mit diesem Tag.':
+    'One shared list for all documents. Renaming and deleting affect every document with this tag.',
+  'Tags von „{title}" bearbeiten': 'Edit tags of “{title}”',
+  'Tags bearbeiten': 'Edit tags',
+  'Tag': 'Tag',
+  'Fertig': 'Done',
   'Noch keine Tags angelegt.': 'No tags yet.',
   'Tag „{name}" umbenennen': 'Rename tag “{name}”',
   'Tag umbenannt': 'Tag renamed',

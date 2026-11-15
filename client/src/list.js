@@ -4,7 +4,7 @@ import { api, logout, toast } from './base.js';
 import { t, locale } from './i18n.js';
 import { url } from './paths.js';
 import { statusBadge } from './status.js';
-import { tagBadge } from './tags.js';
+import { tagBadge, setupTagDialog, setupTagManager } from './tags.js';
 import { savePendingImport } from './pending-import.js';
 
 const grid = document.getElementById('doc-grid');
@@ -39,6 +39,25 @@ function tagRow(d) {
   row.className = 'tag-list';
   row.append(...d.tags.map(tagBadge));
   return [row];
+}
+
+// Tags below the card body. Owner and editors get a button that opens the tag dialog.
+function tagArea(d) {
+  const area = document.createElement('div');
+  area.className = 'doc-card-tags';
+  area.append(...d.tags.map(tagBadge));
+  if (d.role === 'owner' || d.role === 'editor') {
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'btn btn-sm btn-ghost-secondary tag-edit';
+    edit.setAttribute('aria-label', t('Tags von „{title}" bearbeiten', { title: d.title }));
+    edit.innerHTML = d.tags.length ? '<i class="ti ti-pencil"></i>' : '<i class="ti ti-tag me-1"></i>';
+    if (!d.tags.length) edit.append(t('Tag'));
+    edit.title = t('Tags bearbeiten');
+    edit.addEventListener('click', () => openTagDialog?.(d));
+    area.append(edit);
+  }
+  return area;
 }
 
 // Tag filter: all tags on the listed documents. Hidden while no document has tags.
@@ -83,8 +102,7 @@ function render() {
       badge.textContent = d.requests === 1 ? t('1 offener Antrag') : t('{n} offene Anträge', { n: d.requests });
       link.append(badge);
     }
-    link.append(...tagRow(d));
-    card.append(link);
+    card.append(link, tagArea(d));
     if (d.role !== 'owner') return card;
     const del = document.createElement('button');
     del.type = 'button';
@@ -202,6 +220,10 @@ try {
   if (saved && [...stateFilter.options].some((o) => o.value === saved)) stateFilter.value = saved;
 } catch { /* storage blocked */ }
 
+// Tags: assigning happens on this page only; admins also keep the shared list here.
+let openTagDialog = null;
+const tagsChanged = () => { fillTagFilter(); render(); };
+
 // Admins can take away creating documents and requesting rights; the server enforces both.
 const meLoaded = api('/api/me').then((me) => {
   document.getElementById('me-name').textContent = me.name;
@@ -210,5 +232,12 @@ const meLoaded = api('/api/me').then((me) => {
   document.getElementById('import-btn').hidden = !me.canCreate;
   document.getElementById('empty-create-hint').hidden = !me.canCreate;
   canRequest = me.canRequest;
+  openTagDialog = setupTagDialog({ isAdmin: me.isAdmin, onChange: tagsChanged });
+  if (me.isAdmin) {
+    const openManager = setupTagManager({ onChange: load });
+    const manageBtn = document.getElementById('manage-tags-btn');
+    manageBtn.hidden = false;
+    manageBtn.addEventListener('click', openManager);
+  }
 });
 meLoaded.finally(load);
