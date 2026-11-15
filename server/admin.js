@@ -7,16 +7,16 @@ import { hashPassword, deleteUserSessions, MIN_PASSWORD_LENGTH, USERNAME_RE } fr
 import { ROLES, allTags, cleanTagName } from './docs.js';
 
 // Account permissions: request field → column.
-const PERMISSIONS = { canCreate: 'can_create', canRequest: 'can_request', seeOthers: 'see_others' };
+const PERMISSIONS = { canCreate: 'can_create', canRequest: 'can_request', seeOthers: 'see_others', canUpload: 'can_upload' };
 
 const listUsers = () => db.prepare(`
   SELECT u.id, u.username, u.name, u.is_admin AS isAdmin, u.created_at,
-    u.can_create AS canCreate, u.can_request AS canRequest, u.see_others AS seeOthers,
+    u.can_create AS canCreate, u.can_request AS canRequest, u.see_others AS seeOthers, u.can_upload AS canUpload,
     (SELECT COUNT(*) FROM documents d WHERE d.owner_id = u.id AND d.deleted_at IS NULL) AS ownedDocs,
     (SELECT COUNT(*) FROM document_members m JOIN documents d ON d.id = m.doc_id
       WHERE m.user_id = u.id AND d.deleted_at IS NULL) AS sharedDocs
   FROM users u ORDER BY u.name`).all()
-  .map((u) => ({ ...u, isAdmin: !!u.isAdmin, canCreate: !!u.canCreate, canRequest: !!u.canRequest, seeOthers: !!u.seeOthers }));
+  .map((u) => ({ ...u, isAdmin: !!u.isAdmin, canCreate: !!u.canCreate, canRequest: !!u.canRequest, seeOthers: !!u.seeOthers, canUpload: !!u.canUpload }));
 
 const checkPassword = (pw) => typeof pw === 'string' && pw.length >= MIN_PASSWORD_LENGTH;
 

@@ -42,7 +42,7 @@ db.exec(`
 const userColumns = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
 if (!userColumns.includes('is_admin')) db.exec('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0');
 // Per-account permissions set by admins: create documents, request more rights, see titles of other documents.
-for (const column of ['can_create', 'can_request', 'see_others']) {
+for (const column of ['can_create', 'can_request', 'see_others', 'can_upload']) {
   if (!userColumns.includes(column)) db.exec(`ALTER TABLE users ADD COLUMN ${column} INTEGER NOT NULL DEFAULT 1`);
 }
 
@@ -165,3 +165,8 @@ db.exec(`
     PRIMARY KEY (doc_id, version)
   );
 `);
+// Per person and file: may "Lesen"/"Vorschlagen" download? Owner and "Bearbeiten" always may (server/files.js).
+const memberColumns = db.prepare('PRAGMA table_info(document_members)').all().map((c) => c.name);
+if (!memberColumns.includes('can_download')) {
+  db.exec('ALTER TABLE document_members ADD COLUMN can_download INTEGER NOT NULL DEFAULT 1');
+}

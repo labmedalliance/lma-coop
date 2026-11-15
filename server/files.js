@@ -11,7 +11,9 @@
 // 4. The file extension must stay the same (no .xlsx replaced by a .docx).
 // Every version is kept. "Wiederherstellen" makes an old version the newest one; nothing is overwritten.
 //
-// Roles: owner and "Bearbeiten" check out, upload and restore; "Vorschlagen" and "Lesen" only download.
+// Roles: owner and "Bearbeiten" check out, upload and restore; "Vorschlagen" and "Lesen" only download, and only if
+// the owner allows it for that person (document_members.can_download). New files need the account permissions
+// "Neue Dokumente anlegen" and "Dateien hochladen".
 // The owner can delete old versions (not the current one), e.g. a version with personal data by mistake.
 //
 // Limits against filling the disk: 25 MB per file, a storage quota per person (FILE_QUOTA_MB, default 500 MB,
@@ -134,6 +136,13 @@ export function purgeDeletedFiles(now = Date.now()) {
   return removed;
 }
 
+/** Owner and "Bearbeiten" always download; others only if the owner allows it for them. */
+export function mayDownload(docId, userId, role) {
+  if (role === 'owner' || role === 'editor') return true;
+  return db.prepare('SELECT can_download FROM document_members WHERE doc_id = ? AND user_id = ?').get(docId, userId)
+    ?.can_download === 1;
+}
+
 /** State of a file for the file page: versions (without bytes) and the checkout. */
 export function fileState(docId) {
   const versions = db.prepare(`SELECT v.version, v.name, v.size, v.note, v.restored_from, v.created_at, u.name AS user
@@ -164,8 +173,11 @@ const bodyOf = (req) => (Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0))
 
 /** POST /api/files: new file document from an upload (version 1). */
 export function newFileRoute() {
-  const mayCreate = (req, res, next) => (req.user.canCreate
-    ? next() : res.status(403).json({ error: 'Du darfst keine neuen Dokumente anlegen' }));
+  const mayCreate = (req, res, next) => {
+    if (!req.user.canCreate) return res.status(403).json({ error: 'Du darfst keine neuen Dokumente anlegen' });
+    if (!req.user.canUpload) return res.status(403).json({ error: 'Du darfst keine Dateien hochladen' });
+    next();
+  };
   return [mayCreate, uploadLimits, transferSlot, raw, (req, res) => {
     const data = bodyOf(req);
     const name = cleanFileName(req.get('X-File-Name'));
@@ -201,10 +213,15 @@ export function filesRouter() {
   const mayChange = (req, res, next) => (CHANGE_ROLES.includes(req.role)
     ? next() : res.status(403).json({ error: 'Keine Berechtigung' }));
 
-  router.get('/', (req, res) => res.json(fileState(req.params.id)));
+  router.get('/', (req, res) => res.json({
+    ...fileState(req.params.id), canDownload: mayDownload(req.params.id, req.user.id, req.role),
+  }));
 
   // Download of one version; "latest" is the newest.
-  router.get('/versions/:version', transferSlot, (req, res) => {
+  const downloadAllowed = (req, res, next) => (mayDownload(req.params.id, req.user.id, req.role)
+    ? next() : res.status(403).json({ error: 'Herunterladen ist für dich nicht freigegeben' }));
+
+  router.get('/versions/:version', downloadAllowed, transferSlot, (req, res) => {
     const latest = current(req.params.id);
     const version = req.params.version === 'latest' ? latest?.version : Number(req.params.version);
     const row = Number.isInteger(version)

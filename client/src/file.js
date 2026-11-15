@@ -30,7 +30,8 @@ if (meta.kind !== 'file') {
 }
 const role = meta.role;
 const canChange = role === 'owner' || role === 'editor';
-let state = { versions: [], checkout: null };
+let state = { versions: [], checkout: null, canDownload: false };
+let canDownload = false;
 
 // --- Title and status (same as the document page) ----------------------------
 
@@ -112,6 +113,9 @@ function explain(err) {
 // --- Rendering --------------------------------------------------------------------
 
 function render() {
+  // Answers of checkout/upload carry no canDownload; keep the last known value.
+  if (typeof state.canDownload === 'boolean') canDownload = state.canDownload;
+  else state.canDownload = canDownload;
   const [latest] = state.versions;
   if (!latest) return;
   const ext = extOf(latest.name);
@@ -128,8 +132,13 @@ function render() {
     box.className = `alert mt-3 mb-0 ${mine ? 'alert-info' : 'alert-warning'}`;
     box.textContent = mine
       ? t('Du bearbeitest diese Datei seit {at}. Lade die geänderte Datei hoch, wenn du fertig bist. Bis dahin kann niemand sonst eine neue Version hochladen.', { at: dateFmt.format(co.at) })
-      : t('{name} bearbeitet diese Datei seit {at}. Du kannst sie herunterladen, aber erst danach eine neue Version hochladen.', { name: co.name, at: dateFmt.format(co.at) });
+      : canChange
+        ? t('{name} bearbeitet diese Datei seit {at}. Du kannst sie herunterladen, aber erst danach eine neue Version hochladen.', { name: co.name, at: dateFmt.format(co.at) })
+        : t('{name} bearbeitet diese Datei seit {at}.', { name: co.name, at: dateFmt.format(co.at) });
   }
+  // Without download permission the page shows the file and its history, but no download.
+  $('download-btn').hidden = !state.canDownload;
+  $('no-download').hidden = state.canDownload;
   $('checkout-btn').hidden = !canChange || !!co;
   $('upload-btn').hidden = !mine;
   $('release-btn').hidden = !mine;
@@ -154,9 +163,11 @@ function render() {
     });
     const actions = document.createElement('td');
     actions.className = 'text-end text-nowrap';
-    const dl = button('ti-download', t('Version {v} herunterladen', { v: v.version }));
-    dl.addEventListener('click', () => download(v.version));
-    actions.append(dl);
+    if (state.canDownload) {
+      const dl = button('ti-download', t('Version {v} herunterladen', { v: v.version }));
+      dl.addEventListener('click', () => download(v.version));
+      actions.append(dl);
+    }
     if (canChange && v !== latest && !(co && !mine)) {
       const restore = button('ti-history', t('Version {v} wiederherstellen', { v: v.version }));
       restore.addEventListener('click', () => confirmRestore(v));
@@ -315,7 +326,7 @@ $('upload-submit').addEventListener('click', async () => {
 // --- Sharing and requests -------------------------------------------------------------
 
 // No live connection on this page; the owner sees new requests when opening the dialog.
-setupSharing({ docId, role, provider: { on() {} } });
+setupSharing({ docId, role, provider: { on() {} }, isFile: true });
 if ((role === 'suggester' || role === 'viewer') && me.canRequest) setupEditRequest(docId, 'suggester');
 
 await load();

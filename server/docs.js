@@ -214,8 +214,10 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
   router.get('/:id/members', access(), (req, res) => {
     const owner = db.prepare(`SELECT u.id, u.username, u.name FROM documents d JOIN users u ON u.id = d.owner_id
       WHERE d.id = ?`).get(req.params.id);
-    const members = db.prepare(`SELECT u.id, u.username, u.name, m.role FROM document_members m
-      JOIN users u ON u.id = m.user_id WHERE m.doc_id = ? ORDER BY u.name`).all(req.params.id);
+    const members = db.prepare(`SELECT u.id, u.username, u.name, m.role, m.can_download = 1 AS canDownload
+      FROM document_members m
+      JOIN users u ON u.id = m.user_id WHERE m.doc_id = ? ORDER BY u.name`).all(req.params.id)
+      .map((m) => ({ ...m, canDownload: !!m.canDownload }));
     res.json({ owner, members, canManage: req.role === 'owner' });
   });
 
@@ -227,6 +229,11 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
     if (userId === req.user.id) return res.status(400).json({ error: 'Du bist bereits Eigentümer:in' });
     db.prepare(`INSERT INTO document_members (doc_id, user_id, role) VALUES (?, ?, ?)
       ON CONFLICT(doc_id, user_id) DO UPDATE SET role = excluded.role`).run(req.params.id, userId, role);
+    // Files: optional { canDownload } decides whether "Lesen"/"Vorschlagen" may download (default: yes).
+    if (typeof req.body?.canDownload === 'boolean') {
+      db.prepare('UPDATE document_members SET can_download = ? WHERE doc_id = ? AND user_id = ?')
+        .run(req.body.canDownload ? 1 : 0, req.params.id, userId);
+    }
     // Setting a role answers an open request of that person.
     const answered = db.prepare('DELETE FROM access_requests WHERE doc_id = ? AND user_id = ?').run(req.params.id, userId).changes;
     onAccessChange({ docId: req.params.id, userId });

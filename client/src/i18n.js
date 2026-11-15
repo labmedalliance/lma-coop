@@ -427,6 +427,18 @@ export const EN = {
 
   // Images
   'Bild': 'Image',
+  'Dateien hochladen': 'Upload files',
+  '{name} bearbeitet diese Datei seit {at}.': '{name} has been editing this file since {at}.',
+  'Excel-, PowerPoint- und andere Dateien mit „Datei hochladen“ neu anlegen. Neue Versionen bestehender Dateien regelt die Rolle an der Datei.':
+    'Create Excel, PowerPoint and other files with “Upload file”. New versions of existing files depend on the role in that file.',
+  'Download': 'Download',
+  'Darf {name} die Datei herunterladen?': 'May {name} download the file?',
+  '{name} darf herunterladen': '{name} may download',
+  'Herunterladen ist für dich nicht freigegeben. Bitte die Eigentümer:in darum.': 'Downloading is not enabled for you. Ask the owner for it.',
+  'sieht die Datei und lädt sie herunter, wenn': 'sees the file and downloads it if',
+  'eingeschaltet ist.': 'is switched on.',
+  'Herunterladen ist für dich nicht freigegeben': 'Downloading is not enabled for you',
+  'Du darfst keine Dateien hochladen': 'You may not upload files',
   'Bild einfügen': 'Insert image',
   'Bildbreite 25 %': 'Image width 25%',
   'Bildbreite 50 %': 'Image width 50%',
@@ -522,7 +534,6 @@ export const EN = {
   'Was hast du geändert? (optional)': 'What did you change? (optional)',
   'Wer darf diese Datei sehen?': 'Who may see this file?',
   'darf neue Versionen hochladen.': 'may upload new versions.',
-  'darf nur herunterladen.': 'may only download.',
   'In Bearbeitung: {name}': 'Being edited: {name}',
   'Version {v}': 'Version {v}',
   'aktuell': 'current',

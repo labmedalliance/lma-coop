@@ -195,3 +195,35 @@ test('hardening: wrong file type is refused before the body is read', async () =
   assert.equal(res.status, 400);
   assert.equal((await res.json()).code, 'wrong-type');
 });
+
+test('permissions: "Dateien hochladen" per account, download per person and file', async () => {
+  const carlId = await userId('carl');
+  // Admin (Anna) takes away uploading from Carl: he cannot create files, but still text documents.
+  assert.equal((await json(anna, `/api/admin/users/${carlId}`, 'PATCH', { canUpload: false })).status, 200);
+  assert.equal((await (await json(anna, '/api/admin/users')).json()).find((u) => u.id === carlId).canUpload, false);
+  assert.equal((await (await json(carl, '/api/me')).json()).canUpload, false);
+  const refused = await upload(carl, '/api/files', 'x.xlsx', 'c');
+  assert.deepEqual([refused.status, (await refused.json()).error], [403, 'Du darfst keine Dateien hochladen']);
+  assert.equal((await json(carl, '/api/docs', 'POST', { title: 'Text' })).status, 201);
+  await json(anna, `/api/admin/users/${carlId}`, 'PATCH', { canUpload: true });
+  assert.equal((await upload(carl, '/api/files', 'x.xlsx', 'c')).status, 201);
+
+  // Download per person: Carl reads without download, Ben edits (always downloads).
+  const { id } = await (await upload(anna, '/api/files', 'Geheim.xlsx', 'g1')).json();
+  const fileUrl = `/api/docs/${id}/file`;
+  await json(anna, `/api/docs/${id}/members/${carlId}`, 'PUT', { role: 'viewer', canDownload: false });
+  await json(anna, `/api/docs/${id}/members/${await userId('ben')}`, 'PUT', { role: 'editor', canDownload: false });
+  const members = (await (await json(anna, `/api/docs/${id}/members`)).json()).members;
+  assert.equal(members.find((m) => m.id === carlId).canDownload, false);
+
+  assert.equal((await (await json(carl, fileUrl)).json()).canDownload, false);
+  assert.equal((await (await json(carl, fileUrl)).json()).versions.length, 1);
+  assert.equal((await fetch(`${base}${fileUrl}/versions/latest`, { headers: { cookie: carl } })).status, 403);
+  assert.equal((await fetch(`${base}${fileUrl}/versions/latest`, { headers: { cookie: ben } })).status, 200);
+
+  // Changing only the role keeps the download setting; switching it on allows the download.
+  await json(anna, `/api/docs/${id}/members/${carlId}`, 'PUT', { role: 'suggester' });
+  assert.equal((await fetch(`${base}${fileUrl}/versions/latest`, { headers: { cookie: carl } })).status, 403);
+  await json(anna, `/api/docs/${id}/members/${carlId}`, 'PUT', { role: 'suggester', canDownload: true });
+  assert.equal((await fetch(`${base}${fileUrl}/versions/latest`, { headers: { cookie: carl } })).status, 200);
+});

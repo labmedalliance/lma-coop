@@ -41,6 +41,7 @@
           </div>
         </div>
         <div class="alert mt-3 mb-0" id="checkout-box" role="status" hidden></div>
+        <div class="alert alert-secondary mt-3 mb-0" id="no-download" hidden><i class="ti ti-download-off me-1"></i>Herunterladen ist für dich nicht freigegeben. Bitte die Eigentümer:in darum.</div>
         <div class="d-flex flex-wrap gap-2 mt-3" id="file-actions">
           <button class="btn" id="download-btn" type="button"><i class="ti ti-download me-1"></i>Herunterladen</button>
           <button class="btn btn-primary" id="checkout-btn" type="button" hidden
@@ -103,7 +104,7 @@
     <form method="dialog">
       <h2 class="h3" id="share-title">Freigeben</h2>
       <p class="text-secondary small mb-2">Wer darf diese Datei sehen? <strong>Bearbeiten</strong> darf neue Versionen
-        hochladen. <strong>Lesen</strong> darf nur herunterladen.</p>
+        hochladen. <strong>Lesen</strong> sieht die Datei und lädt sie herunter, wenn <strong>Download</strong> eingeschaltet ist.</p>
       <div class="request-section" id="request-section" hidden>
         <h3 class="h4 mb-1">Anträge</h3>
         <ul class="member-list" id="request-list"></ul>

@@ -9,7 +9,7 @@ const $ = (id) => document.getElementById(id);
 const ROLE_LABELS = { editor: t('Bearbeiten'), suggester: t('Vorschlagen'), viewer: t('Lesen') };
 const RANK = { viewer: 1, suggester: 2, editor: 3 };
 
-export function setupSharing({ docId, role, provider }) {
+export function setupSharing({ docId, role, provider, isFile = false }) {
   const button = $('share-btn');
   if (role !== 'owner') {
     // Others can see who has access, but not change it.
@@ -160,14 +160,35 @@ export function setupSharing({ docId, role, provider }) {
       await render();
       toast(t('{name} hat keinen Zugriff mehr', { name: user.name }), { actionLabel: t('Rückgängig'), onAction: () => save(user.id, member.role) });
     });
-    li.append(select, remove);
+    li.append(select);
+    // Files: the owner decides per person whether "Lesen"/"Vorschlagen" may download.
+    if (isFile && member.role !== 'editor') li.append(downloadSwitch(user, member));
+    li.append(remove);
     return li;
   }
 
-  async function save(userId, newRole) {
+  function downloadSwitch(user, member) {
+    const wrap = document.createElement('label');
+    wrap.className = 'form-check form-switch m-0 download-switch';
+    wrap.title = t('Darf {name} die Datei herunterladen?', { name: user.name });
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.className = 'form-check-input';
+    box.checked = member.canDownload;
+    box.setAttribute('aria-label', t('{name} darf herunterladen', { name: user.name }));
+    box.addEventListener('change', () => save(user.id, member.role, box.checked));
+    const text = document.createElement('span');
+    text.className = 'form-check-label small';
+    text.textContent = t('Download');
+    wrap.append(box, text);
+    return wrap;
+  }
+
+  async function save(userId, newRole, canDownload) {
     errorBox.textContent = '';
     try {
-      await api(`/api/docs/${docId}/members/${userId}`, { method: 'PUT', body: { role: newRole } });
+      const body = canDownload === undefined ? { role: newRole } : { role: newRole, canDownload };
+      await api(`/api/docs/${docId}/members/${userId}`, { method: 'PUT', body });
       await loadRequests(); // Setting a role answers that person's request.
       await render();
     } catch (err) {

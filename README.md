@@ -91,8 +91,15 @@ Grenzen gegen volle Platten und zum Datenschutz:
 |---|---|
 | Eigentümer:in | alles, auch fremde Reservierung aufheben |
 | Eigentümer:in (zusätzlich) | alte Versionen endgültig löschen |
-| Bearbeiten | reservieren, hochladen, wiederherstellen |
-| Vorschlagen, Lesen | nur herunterladen |
+| Bearbeiten | reservieren, hochladen, wiederherstellen, immer herunterladen |
+| Vorschlagen, Lesen | Datei und Versionen sehen; herunterladen nur mit **Download** |
+
+**Download** ist ein Schalter pro Person im Dialog **Freigeben** einer Datei (Standard: ein). Ist er aus, sieht die
+Person die Datei und ihren Verlauf, kann aber nichts herunterladen.
+
+Neue Dateien legt nur an, wer die Kontoberechtigungen **Neue Dokumente anlegen** und **Dateien hochladen** hat. Admins
+setzen beide auf der Seite **Benutzer** über das Schlüsselsymbol. Neue Versionen bestehender Dateien regelt die Rolle
+an der Datei.
 
 Die Dateien liegen in der SQLite-Datenbank (`file_versions`) und sind damit im täglichen Backup enthalten.
 

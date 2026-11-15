@@ -123,6 +123,7 @@ const PERMISSIONS = [
   ['canCreate', t('Neue Dokumente anlegen'), t('Auch „Word importieren“ in der Dokumentliste.')],
   ['canRequest', t('Rechte beantragen'), t('Zugriff auf fremde Dokumente oder „Bearbeiten“ statt „Vorschlagen“ beantragen.')],
   ['seeOthers', t('Fremde Dokumente in der Liste sehen'), t('Titel und Eigentümer:in unter „Weitere Dokumente“, ohne Inhalt.')],
+  ['canUpload', t('Dateien hochladen'), t('Excel-, PowerPoint- und andere Dateien mit „Datei hochladen“ neu anlegen. Neue Versionen bestehender Dateien regelt die Rolle an der Datei.')],
 ];
 const permDialog = $('perm-dialog');
 let permDocs = [];

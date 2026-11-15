@@ -513,6 +513,14 @@ body.is-suggesting .prose {
   width: auto;
 }
 
+/* Files: role, "Download" switch and remove button. */
+.member-list li:has(.download-switch) {
+  grid-template-columns: 1fr auto auto auto;
+}
+.download-switch {
+  white-space: nowrap;
+}
+
 .share-add {
   display: grid;
   grid-template-columns: 1fr auto auto;

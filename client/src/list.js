@@ -278,7 +278,7 @@ const meLoaded = api('/api/me').then((me) => {
   document.getElementById('admin-link').hidden = !me.isAdmin;
   document.getElementById('new-doc-btn').hidden = !me.canCreate;
   document.getElementById('import-btn').hidden = !me.canCreate;
-  document.getElementById('file-btn').hidden = !me.canCreate;
+  document.getElementById('file-btn').hidden = !(me.canCreate && me.canUpload);
   document.getElementById('empty-create-hint').hidden = !me.canCreate;
   canRequest = me.canRequest;
   openTagDialog = setupTagDialog({ isAdmin: me.isAdmin, onChange: tagsChanged });
