@@ -483,6 +483,8 @@ export const EN = {
 
   // Files with versions
   'Datei hochladen': 'Upload file',
+  'Bild': 'Image',
+  'Textdokument': 'Text document',
   'Excel-, PowerPoint- oder andere Datei mit Versionen ablegen': 'Store an Excel, PowerPoint or other file with versions',
   'Datei – LMA Coop': 'File – LMA Coop',
   'Datei': 'File',

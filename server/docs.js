@@ -139,7 +139,8 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
   router.get('/discover', (req, res) => {
     if (!req.user.seeOthers) return res.json([]);
     res.json(withTags(db.prepare(`
-      SELECT d.id, d.title, d.status, d.kind, d.updated_at, u.name AS owner, r.role AS requested
+      SELECT d.id, d.title, d.status, d.kind, d.updated_at, u.name AS owner, r.role AS requested,
+        (SELECT v.name FROM file_versions v WHERE v.doc_id = d.id ORDER BY v.version DESC LIMIT 1) AS file_name
       FROM documents d
       LEFT JOIN users u ON u.id = d.owner_id
       LEFT JOIN document_members m ON m.doc_id = d.id AND m.user_id = ?

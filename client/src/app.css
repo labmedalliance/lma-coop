@@ -311,8 +311,12 @@
 .file-main {
   max-width: 960px;
 }
-.file-icon {
-  font-size: 2.75rem;
-  line-height: 1;
-  color: #0f766e;
+
+/* Type icon of a list entry or file (client/src/file-kinds.js). */
+.kind-icon {
+  flex-shrink: 0;
+  font-size: 1.35rem;
+}
+.kind-icon.avatar-lg {
+  font-size: 2rem;
 }

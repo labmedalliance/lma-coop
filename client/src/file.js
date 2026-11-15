@@ -8,7 +8,7 @@ import { t, locale } from './i18n.js';
 import { url } from './paths.js';
 import { setupSharing } from './share.js';
 import { showNoAccess, setupEditRequest } from './access.js';
-import { fileIcon, formatSize, extOf } from './file-kinds.js';
+import { kindIcon, formatSize, extOf } from './file-kinds.js';
 import './editor.css';
 
 const docId = window.location.pathname.split('/').pop();
@@ -113,7 +113,7 @@ function render() {
   const [latest] = state.versions;
   if (!latest) return;
   const ext = extOf(latest.name);
-  $('file-icon').innerHTML = `<i class="ti ${fileIcon(ext)}"></i>`;
+  $('file-icon').replaceChildren(kindIcon({ kind: 'file', file_name: latest.name }, 'avatar-lg'));
   $('current-title').textContent = t('Version {v}', { v: latest.version });
   $('current-meta').textContent = `${latest.user || t('unbekannt')} · ${dateFmt.format(latest.created_at)} · ${formatSize(latest.size)}${ext ? ` · .${ext}` : ''}`;
   $('current-note').textContent = noteText(latest);

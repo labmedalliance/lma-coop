@@ -6,7 +6,7 @@ import { url } from './paths.js';
 import { statusBadge } from './status.js';
 import { tagBadge, setupTagDialog, setupTagManager } from './tags.js';
 import { savePendingImport } from './pending-import.js';
-import { fileIcon, extOf } from './file-kinds.js';
+import { kindOf, kindIcon } from './file-kinds.js';
 
 const grid = document.getElementById('doc-grid');
 const empty = document.getElementById('empty-state');
@@ -23,13 +23,14 @@ const ROLE_BADGES = {
 };
 
 // "active" hides archived documents; "all" shows everything; otherwise exactly that status.
-// The search matches the title and the tags.
+// The search matches the title, the tags and the type ("Excel", "PDF").
 function matches(d, q) {
   const state = stateFilter.value;
   const stateOk = state === 'all' || (state === 'active' ? d.status !== 'archived' : d.status === state);
   const tag = tagFilter.value.toLowerCase();
   const tagOk = !tag || d.tags.some((name) => name.toLowerCase() === tag);
-  const textOk = d.title.toLowerCase().includes(q) || d.tags.some((name) => name.toLowerCase().includes(q));
+  const textOk = d.title.toLowerCase().includes(q) || d.tags.some((name) => name.toLowerCase().includes(q))
+    || kindOf(d).label.toLowerCase().includes(q);
   return stateOk && tagOk && textOk;
 }
 
@@ -75,17 +76,25 @@ function fillTagFilter() {
 // Text documents open in the editor, files with versions on the file page.
 const docUrl = (d) => url(d.kind === 'file' ? `/f/${d.id}` : `/d/${d.id}`);
 
-/** Title line of a card; files get an icon for their type. */
-function cardTitle(d) {
+/**
+ * Head of a card: coloured type icon, title and type ("Excel · Version 3", "Textdokument"), so the kind of
+ * entry is clear at a glance.
+ */
+function cardHead(d) {
+  const head = document.createElement('div');
+  head.className = 'd-flex align-items-center gap-2 mb-2';
+  const text = document.createElement('div');
+  text.className = 'min-w-0';
   const title = document.createElement('div');
-  title.className = 'fw-bold mb-1 text-truncate';
-  if (d.kind === 'file') {
-    const icon = document.createElement('i');
-    icon.className = `ti ${fileIcon(extOf(d.file_name))} me-1 text-secondary`;
-    title.append(icon);
-  }
-  title.append(d.title);
-  return title;
+  title.className = 'fw-bold text-truncate';
+  title.textContent = d.title;
+  const type = document.createElement('div');
+  type.className = 'small text-secondary';
+  const { label } = kindOf(d);
+  type.textContent = d.kind === 'file' && d.version ? `${label} · ${t('Version {v}', { v: d.version })}` : label;
+  text.append(title, type);
+  head.append(kindIcon(d), text);
+  return head;
 }
 
 function render() {
@@ -100,13 +109,7 @@ function render() {
     const meta = document.createElement('div');
     meta.className = 'text-secondary small';
     meta.textContent = `${d.owner || '–'} · ${dateFmt.format(d.updated_at)}`;
-    link.append(cardTitle(d), meta);
-    if (d.kind === 'file') {
-      const file = document.createElement('div');
-      file.className = 'small text-secondary';
-      file.textContent = `.${extOf(d.file_name)} · ${t('Version {v}', { v: d.version })}`;
-      link.append(file);
-    }
+    link.append(cardHead(d), meta);
     if (d.checkout) {
       const badge = document.createElement('span');
       badge.className = 'badge bg-purple-lt d-inline-block mt-2 me-1';
@@ -156,7 +159,7 @@ function renderOthers(q) {
     const link = document.createElement('a');
     link.href = docUrl(d);
     link.className = 'card-body text-reset text-decoration-none';
-    const title = cardTitle(d);
+    const title = cardHead(d);
     const meta = document.createElement('div');
     meta.className = 'text-secondary small';
     meta.textContent = `${d.owner || '–'} · ${dateFmt.format(d.updated_at)}`;
