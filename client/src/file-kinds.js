@@ -30,7 +30,7 @@ export const extOf = (name) => (String(name || '').match(/\.([^.]+)$/)?.[1] || '
  */
 export function kindOf(entry) {
   if (entry.kind !== 'file') return KINDS.text;
-  const ext = extOf(entry.file_name);
+  const ext = entry.file_ext ?? extOf(entry.file_name);
   return KINDS[BY_EXT[ext]] || { icon: 'ti-file', tone: 'secondary', label: ext ? ext.toUpperCase() : t('Datei') };
 }
 

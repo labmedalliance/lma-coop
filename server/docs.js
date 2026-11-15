@@ -10,6 +10,7 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
 import { db } from './db.js';
+import { extensionOf } from './files.js';
 
 export const ROLES = ['editor', 'suggester', 'viewer'];
 const REQUEST_ROLES = ['editor', 'suggester'];
@@ -138,7 +139,8 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
   // Documents of others without access: titles are visible to every account, contents only after sharing.
   router.get('/discover', (req, res) => {
     if (!req.user.seeOthers) return res.json([]);
-    res.json(withTags(db.prepare(`
+    // Without access only the file type is visible (for the icon), not the original file name.
+    const rows = db.prepare(`
       SELECT d.id, d.title, d.status, d.kind, d.updated_at, u.name AS owner, r.role AS requested,
         (SELECT v.name FROM file_versions v WHERE v.doc_id = d.id ORDER BY v.version DESC LIMIT 1) AS file_name
       FROM documents d
@@ -146,7 +148,9 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
       LEFT JOIN document_members m ON m.doc_id = d.id AND m.user_id = ?
       LEFT JOIN access_requests r ON r.doc_id = d.id AND r.user_id = ?
       WHERE d.deleted_at IS NULL AND (d.owner_id IS NULL OR d.owner_id != ?) AND m.user_id IS NULL
-      ORDER BY d.updated_at DESC`).all(req.user.id, req.user.id, req.user.id)));
+      ORDER BY d.updated_at DESC`).all(req.user.id, req.user.id, req.user.id)
+      .map(({ file_name: fileName, ...row }) => ({ ...row, file_ext: fileName ? extensionOf(fileName) : null }));
+    res.json(withTags(rows));
   });
 
   // The shared tag list (names only), for choosing tags in a document.

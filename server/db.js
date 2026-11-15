@@ -12,6 +12,7 @@ export const db = new DatabaseSync(path.join(dataDir, 'docs.sqlite'));
 
 db.exec(`
   PRAGMA journal_mode = WAL;
+  PRAGMA journal_size_limit = 67108864; -- the WAL shrinks back to at most 64 MB after large file uploads
   PRAGMA foreign_keys = ON;
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,

@@ -159,3 +159,39 @@ test('upload limits: empty file and missing name', async () => {
   assert.equal((await upload(anna, '/api/files', 'x.xlsx', '')).status, 400);
   assert.equal((await upload(anna, '/api/files', '', 'abc')).status, 400);
 });
+
+test('hardening: discover shows only the type, owner deletes old versions, Origin null is refused', async () => {
+  const { id } = await (await upload(anna, '/api/files', 'Befunde_Mustermann.xlsx', 'h1')).json();
+  const fileUrl = `/api/docs/${id}/file`;
+  // Ben has no access: he sees the type for the icon, not the original file name.
+  const seen = (await (await json(ben, '/api/docs/discover')).json()).find((d) => d.id === id);
+  assert.equal(seen.file_ext, 'xlsx');
+  assert.equal(seen.file_name, undefined);
+
+  await json(anna, `${fileUrl}/checkout`, 'POST');
+  await upload(anna, `${fileUrl}/versions`, 'Befunde_Mustermann.xlsx', 'h2');
+  await json(anna, `/api/docs/${id}/members/${await userId('ben')}`, 'PUT', { role: 'editor' });
+  assert.equal((await json(ben, `${fileUrl}/versions/1`, 'DELETE')).status, 403);
+  assert.equal((await json(anna, `${fileUrl}/versions/2`, 'DELETE')).status, 400);
+  const res = await json(anna, `${fileUrl}/versions/1`, 'DELETE');
+  assert.equal(res.status, 200);
+  assert.deepEqual((await res.json()).versions.map((v) => v.version), [2]);
+
+  const refused = await fetch(`${base}/api/docs`, {
+    method: 'POST', headers: { cookie: anna, origin: 'null', 'Content-Type': 'application/json' }, body: '{}',
+  });
+  assert.equal(refused.status, 403);
+});
+
+test('hardening: wrong file type is refused before the body is read', async () => {
+  const { id } = await (await upload(anna, '/api/files', 'Liste.xlsx', 'l1')).json();
+  await json(anna, `/api/docs/${id}/file/checkout`, 'POST');
+  // Announces a body larger than the limit: the type check answers first, so no 413 from the body parser.
+  const res = await fetch(`${base}/api/docs/${id}/file/versions`, {
+    method: 'POST',
+    headers: { cookie: anna, 'Content-Type': 'application/octet-stream', 'X-File-Name': 'Liste.docx' },
+    body: Buffer.alloc(30 * 1024 * 1024),
+  });
+  assert.equal(res.status, 400);
+  assert.equal((await res.json()).code, 'wrong-type');
+});

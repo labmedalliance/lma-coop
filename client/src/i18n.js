@@ -485,7 +485,20 @@ export const EN = {
   'Datei hochladen': 'Upload file',
   'Bild': 'Image',
   'Textdokument': 'Text document',
-  'Excel-, PowerPoint- oder andere Datei mit Versionen ablegen': 'Store an Excel, PowerPoint or other file with versions',
+  'Excel-, PowerPoint- oder andere Datei mit Versionen ablegen. Keine Patientendaten.':
+    'Store an Excel, PowerPoint or other file with versions. No patient data.',
+  'Keine Patientendaten hochladen, höchstens pseudonymisiert oder anonymisiert. Gelöschte Dateien entfernt LMA Coop nach 30 Tagen endgültig.':
+    'Do not upload patient data, at most pseudonymised or anonymised. LMA Coop removes deleted files for good after 30 days.',
+  'Keine Patientendaten hochladen, höchstens pseudonymisiert oder anonymisiert.': 'Do not upload patient data, at most pseudonymised or anonymised.',
+  'Dein Speicherplatz für Dateien ist voll (höchstens {mb} MB). Bitte die Eigentümer:in, alte Versionen zu löschen.':
+    'Your storage for files is full (at most {mb} MB). Ask the owner to delete old versions.',
+  'Version {v} löschen': 'Delete version {v}',
+  'Version {v} gelöscht': 'Version {v} deleted',
+  'Version {v} wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.': 'Version {v} is deleted for good. This cannot be undone.',
+  'Zu viele Uploads. Bitte in einer Stunde erneut versuchen.': 'Too many uploads. Please try again in an hour.',
+  'Gerade laufen viele Übertragungen. Bitte gleich noch einmal versuchen.': 'Many transfers are running right now. Please try again in a moment.',
+  'Dein Speicherplatz für Dateien ist voll': 'Your storage for files is full',
+  'Die aktuelle Version lässt sich nicht löschen': 'The current version cannot be deleted',
   'Datei – LMA Coop': 'File – LMA Coop',
   'Datei': 'File',
   'Aktuelle Version': 'Current version',

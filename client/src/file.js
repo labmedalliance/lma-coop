@@ -96,6 +96,8 @@ function explain(err) {
       return t('Deine Datei beruht auf Version {base}, inzwischen gibt es Version {current}. Lade die aktuelle Version herunter und übertrage deine Änderungen.', { base: d.base, current: d.current });
     case 'wrong-type':
       return t('Falscher Dateityp: erwartet .{expected}, gewählt .{got}.', { expected: d.expected, got: d.got || '–' });
+    case 'quota':
+      return t('Dein Speicherplatz für Dateien ist voll (höchstens {mb} MB). Bitte die Eigentümer:in, alte Versionen zu löschen.', { mb: d.quotaMb });
     case 'checked-out':
       return t('{name} bearbeitet die Datei gerade.', { name: d.checkout?.name || t('Jemand') });
     case 'not-checked-out':
@@ -159,6 +161,12 @@ function render() {
       const restore = button('ti-history', t('Version {v} wiederherstellen', { v: v.version }));
       restore.addEventListener('click', () => confirmRestore(v));
       actions.append(restore);
+    }
+    if (role === 'owner' && v !== latest) {
+      const del = button('ti-trash', t('Version {v} löschen', { v: v.version }));
+      del.classList.replace('btn-ghost-secondary', 'btn-ghost-danger');
+      del.addEventListener('click', () => confirmDeleteVersion(v));
+      actions.append(del);
     }
     tr.append(actions);
     return tr;
@@ -240,6 +248,18 @@ async function confirmRestore(v) {
     toast(t('Version {v} wiederhergestellt', { v: v.version }));
   } catch (err) {
     if (err.data?.versions) { state = err.data; render(); }
+    toast(explain(err));
+  }
+}
+
+// Owner only: removes an old version for good, e.g. one that contains personal data by mistake.
+async function confirmDeleteVersion(v) {
+  if (!await confirmAction(t('Version {v} wird endgültig gelöscht. Das lässt sich nicht rückgängig machen.', { v: v.version }), t('Löschen'))) return;
+  try {
+    state = await call(`${fileApi}/versions/${v.version}`, 'DELETE');
+    render();
+    toast(t('Version {v} gelöscht', { v: v.version }));
+  } catch (err) {
     toast(explain(err));
   }
 }

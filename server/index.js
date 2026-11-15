@@ -18,7 +18,7 @@ import { docsRouter, roleFor } from './docs.js';
 import { adminRouter } from './admin.js';
 import { commentsRouter } from './comments.js';
 import { imagesRouter, imageUploadErrors } from './images.js';
-import { filesRouter, newFileRoute, fileUploadErrors } from './files.js';
+import { filesRouter, newFileRoute, fileUploadErrors, purgeDeletedFiles } from './files.js';
 import { isSuggestionOnly } from './suggestion-guard.js';
 
 const PORT = Number(process.env.PORT || 5200);
@@ -100,9 +100,10 @@ const requireUser = (req, res, next) => (req.user ? next() : res.status(401).jso
 // Blocks cross-site form posts (in addition to SameSite=Lax cookies).
 const sameOrigin = (req, res, next) => {
   const origin = req.headers.origin;
-  if (req.method !== 'GET' && origin && new URL(origin).host !== req.headers.host) {
-    return res.status(403).json({ error: 'Fremde Herkunft' });
-  }
+  if (req.method === 'GET' || !origin) return next();
+  let host = null;
+  try { host = new URL(origin).host; } catch { /* "null" or garbage: refuse below */ }
+  if (host !== req.headers.host) return res.status(403).json({ error: 'Fremde Herkunft' });
   next();
 };
 app.use('/api', sameOrigin);
@@ -194,6 +195,8 @@ app.use('/assets', express.static(path.join(DIST, 'assets'), { immutable: true, 
 // --- Server + WebSocket ---------------------------------------------------
 
 const server = http.createServer(app);
+// Uploads of 25 MB over a slow line take a while; Node's default of 5 minutes is too short.
+server.requestTimeout = 15 * 60_000;
 const wss = new WebSocketServer({ noServer: true, maxPayload: 10 * 1024 * 1024 });
 
 server.on('upgrade', (req, socket, head) => {
@@ -214,6 +217,14 @@ server.on('upgrade', (req, socket, head) => {
 
 // Keeps idle but healthy connections alive.
 setInterval(() => wss.clients.forEach((ws) => ws.ping()), 10_000).unref();
+
+// Deleted files go for good after 30 days (data protection); checked at start and once a day.
+const purge = () => {
+  const removed = purgeDeletedFiles();
+  if (removed) console.log(`Removed ${removed} deleted file(s) for good`);
+};
+purge();
+setInterval(purge, 86400_000).unref();
 
 const shutdown = () => {
   hocuspocus.flushPendingStores();

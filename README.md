@@ -75,11 +75,22 @@ Versionschaos:
 4. **Gleicher Dateityp:** Aus einer `.xlsx` wird keine `.docx`.
 
 Alle Versionen bleiben erhalten. **Wiederherstellen** macht eine alte Version zur neuen aktuellen Version.
-Die Eigentümer:in kann eine fremde Reservierung aufheben, etwa wenn jemand im Urlaub ist.
+Die Eigentümer:in kann eine fremde Reservierung aufheben, etwa wenn jemand im Urlaub ist. Sie kann auch alte
+Versionen endgültig löschen, etwa wenn versehentlich personenbezogene Daten darin stehen.
+
+Grenzen gegen volle Platten und zum Datenschutz:
+
+- höchstens 25 MB pro Datei
+- höchstens 500 MB pro Person, gezählt über alle selbst hochgeladenen Versionen (`FILE_QUOTA_MB`)
+- höchstens 30 Uploads pro Person und Stunde, höchstens 3 Übertragungen gleichzeitig (`FILE_MAX_TRANSFERS`)
+- Gelöschte Dateien entfernt der Server nach 30 Tagen endgültig, samt allen Versionen. Bis dahin lassen sie sich
+  wiederherstellen
+- Wer ohne Zugriff unter **Weitere Dokumente** eine Datei sieht, erfährt nur den Dateityp, nicht den Dateinamen
 
 | Rolle | Darf bei Dateien |
 |---|---|
 | Eigentümer:in | alles, auch fremde Reservierung aufheben |
+| Eigentümer:in (zusätzlich) | alte Versionen endgültig löschen |
 | Bearbeiten | reservieren, hochladen, wiederherstellen |
 | Vorschlagen, Lesen | nur herunterladen |
 
