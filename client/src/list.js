@@ -84,10 +84,11 @@ function cardHead(d) {
   const head = document.createElement('div');
   head.className = 'd-flex align-items-center gap-2 mb-2';
   const text = document.createElement('div');
-  text.className = 'min-w-0';
+  text.className = 'doc-card-text';
   const title = document.createElement('div');
-  title.className = 'fw-bold text-truncate';
+  title.className = 'fw-bold doc-card-title';
   title.textContent = d.title;
+  title.title = d.title;
   const type = document.createElement('div');
   type.className = 'small text-secondary';
   const { label } = kindOf(d);

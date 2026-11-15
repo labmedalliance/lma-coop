@@ -16,6 +16,23 @@
   padding-right: 3rem;
 }
 
+/* Card title: wraps (also inside long words such as file names) and is cut after three lines. */
+.doc-card-text {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.doc-card-title {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Tabler has no min-w-0; flex children need it to shrink below their content. */
+.min-w-0 { min-width: 0; }
+
 .doc-delete {
   position: absolute;
   top: 0.5rem;
