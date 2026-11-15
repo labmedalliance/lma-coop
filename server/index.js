@@ -18,6 +18,7 @@ import { docsRouter, roleFor } from './docs.js';
 import { adminRouter } from './admin.js';
 import { commentsRouter } from './comments.js';
 import { imagesRouter, imageUploadErrors } from './images.js';
+import { filesRouter, newFileRoute, fileUploadErrors } from './files.js';
 import { isSuggestionOnly } from './suggestion-guard.js';
 
 const PORT = Number(process.env.PORT || 5200);
@@ -45,6 +46,8 @@ const hocuspocus = new Hocuspocus({
     const user = userFromCookieHeader(request.headers.get('cookie'));
     const role = user && roleFor(user.id, documentName);
     if (!role) throw new Error('Unauthorized');
+    // Files (kind = 'file') have no collaborative text.
+    if (db.prepare('SELECT kind FROM documents WHERE id = ?').get(documentName)?.kind !== 'doc') throw new Error('Unauthorized');
     // "Lesen": the server ignores every change from this connection.
     if (role === 'viewer') connectionConfig.readOnly = true;
     return { user, role };
@@ -160,6 +163,8 @@ function notifyCommentsChange({ docId }) {
 
 app.use('/api/docs/:id/comments', requireUser, commentsRouter({ onChange: notifyCommentsChange }));
 app.use('/api/docs/:id/images', requireUser, imagesRouter(), imageUploadErrors);
+app.use('/api/docs/:id/file', requireUser, filesRouter(), fileUploadErrors);
+app.post('/api/files', requireUser, ...newFileRoute(), fileUploadErrors);
 app.use('/api/docs', requireUser, docsRouter({ onAccessChange: closeConnectionsOf, onRequestsChange: notifyRequestsChange }));
 app.use('/api/admin', requireUser, adminRouter({ onUsersChanged: closeConnectionsOf, onRequestsChange: notifyRequestsChange }));
 
@@ -177,6 +182,7 @@ const page = (file) => (req, res) => res.sendFile(path.join(DIST, file));
 app.get('/login', page('login.html'));
 app.get('/', (req, res, next) => (req.user ? next() : res.redirect(to('/login'))), page('index.html'));
 app.get('/d/:id', (req, res, next) => (req.user ? next() : res.redirect(to('/login'))), page('doc.html'));
+app.get('/f/:id', (req, res, next) => (req.user ? next() : res.redirect(to('/login'))), page('file.html'));
 app.get('/admin', (req, res, next) => (req.user?.isAdmin ? next() : res.redirect(to('/'))), page('admin.html'));
 // Public: licence and source offer must be reachable without an account (NOTICE term 1(b), AGPL section 13).
 app.get('/about', page('about.html'));

@@ -480,6 +480,82 @@ export const EN = {
   '{n} Bilder fehlen (nur PNG, JPEG, GIF und WebP möglich).': '{n} images are missing (only PNG, JPEG, GIF and WebP possible).',
   'Fußnoten werden nicht übernommen ({n}).': 'Footnotes are not imported ({n}).',
   'Keine gültige Word-Datei (.docx)': 'Not a valid Word file (.docx)',
+
+  // Files with versions
+  'Datei hochladen': 'Upload file',
+  'Excel-, PowerPoint- oder andere Datei mit Versionen ablegen': 'Store an Excel, PowerPoint or other file with versions',
+  'Datei – LMA Coop': 'File – LMA Coop',
+  'Datei': 'File',
+  'Aktuelle Version': 'Current version',
+  'Version': 'Version',
+  'Versionen': 'Versions',
+  'Datum': 'Date',
+  'Von': 'By',
+  'Größe': 'Size',
+  'Notiz': 'Note',
+  'OK': 'OK',
+  'Herunterladen': 'Download',
+  'Hochladen': 'Upload',
+  'Zum Bearbeiten herunterladen': 'Download to edit',
+  'Reserviert die Datei für dich, bis du die geänderte Fassung hochlädst': 'Reserves the file for you until you upload the changed copy',
+  'Geänderte Datei hochladen': 'Upload changed file',
+  'Bearbeitung beenden': 'Stop editing',
+  'Reservierung aufheben': 'Cancel reservation',
+  'So bleibt die Versionierung sauber: Wer etwas ändern will, lädt die Datei mit': 'This keeps versions clean: whoever wants to change something downloads the file with',
+  '. Damit ist sie für diese Person reserviert. Andere können sie weiter herunterladen, aber keine neue Version hochladen. Alte Fassungen nimmt LMA Coop nicht noch einmal an.':
+    '. This reserves it for that person. Others can still download it but cannot upload a new version. LMA Coop does not accept old copies again.',
+  'Was hast du geändert? (optional)': 'What did you change? (optional)',
+  'Wer darf diese Datei sehen?': 'Who may see this file?',
+  'darf neue Versionen hochladen.': 'may upload new versions.',
+  'darf nur herunterladen.': 'may only download.',
+  'In Bearbeitung: {name}': 'Being edited: {name}',
+  'Version {v}': 'Version {v}',
+  'aktuell': 'current',
+  'Jemand': 'Someone',
+  'Bitte eine Datei wählen': 'Please choose a file',
+  'Wähle die Datei, die du seit {at} bearbeitet hast. Sie wird Version {next}.':
+    'Choose the file you have been editing since {at}. It becomes version {next}.',
+  'Version {v} gespeichert': 'Version {v} saved',
+  'Version {v} herunterladen': 'Download version {v}',
+  'Version {v} wiederherstellen': 'Restore version {v}',
+  'Version {v} wiederhergestellt': 'Version {v} restored',
+  'Wiederherstellen': 'Restore',
+  'Wiederhergestellt aus Version {v}': 'Restored from version {v}',
+  'Version {v} wird als neue Version {next} gespeichert. Version {current} bleibt im Verlauf erhalten.':
+    'Version {v} is saved as new version {next}. Version {current} stays in the history.',
+  'Das ist Version {v}, aktuell ist Version {current}. Du hast vermutlich eine alte Fassung gewählt. Lade die aktuelle Version herunter und übertrage deine Änderungen.':
+    'This is version {v}, the current one is version {current}. You probably chose an old copy. Download the current version and carry your changes over.',
+  'Deine Datei beruht auf Version {base}, inzwischen gibt es Version {current}. Lade die aktuelle Version herunter und übertrage deine Änderungen.':
+    'Your file is based on version {base}; there is now version {current}. Download the current version and carry your changes over.',
+  'Deine Reservierung endet, ohne dass eine neue Version entsteht. Änderungen in deiner heruntergeladenen Datei kannst du dann nicht mehr hochladen, ohne die Datei erneut zu reservieren.':
+    'Your reservation ends without a new version. You can then no longer upload changes in your downloaded file without reserving the file again.',
+  'Deine Reservierung wurde aufgehoben. Lade die Datei erneut mit „Zum Bearbeiten herunterladen“.':
+    'Your reservation was cancelled. Download the file again with “Download to edit”.',
+  'Die Datei ist jetzt für dich reserviert. Lade die geänderte Datei hier wieder hoch.':
+    'The file is now reserved for you. Upload the changed file here again.',
+  'Die Datei ist unverändert. Sie gleicht der aktuellen Version {v}.': 'The file is unchanged. It matches the current version {v}.',
+  'Diese Datei wurde zuletzt am {date} gespeichert, also vor deiner Reservierung. Ist das wirklich die geänderte Fassung?':
+    'This file was last saved on {date}, before your reservation. Is it really the changed copy?',
+  'Du bearbeitest diese Datei seit {at}. Lade die geänderte Datei hoch, wenn du fertig bist. Bis dahin kann niemand sonst eine neue Version hochladen.':
+    'You have been editing this file since {at}. Upload the changed file when you are done. Until then, nobody else can upload a new version.',
+  'Falscher Dateityp: erwartet .{expected}, gewählt .{got}.': 'Wrong file type: expected .{expected}, chose .{got}.',
+  '{name} bearbeitet die Datei gerade.': '{name} is editing the file right now.',
+  '{name} bearbeitet die Datei gerade. Deine Reservierung wurde aufgehoben.': '{name} is editing the file right now. Your reservation was cancelled.',
+  '{name} bearbeitet diese Datei seit {at}. Du kannst sie herunterladen, aber erst danach eine neue Version hochladen.':
+    '{name} has been editing this file since {at}. You can download it, but upload a new version only afterwards.',
+  '{name} kann die Änderungen dann nicht mehr hochladen. Sprich dich am besten vorher ab.':
+    '{name} can then no longer upload the changes. Best talk to them first.',
+  'Das ist bereits die aktuelle Version': 'This is already the current version',
+  'Datei ist zu groß (höchstens 25 MB)': 'File is too large (at most 25 MB)',
+  'Dateiname fehlt': 'File name missing',
+  'Die Datei ist leer': 'The file is empty',
+  'Die Datei wird gerade von jemand anderem bearbeitet': 'Someone else is editing the file right now',
+  'Diese Datei gibt es schon als ältere Version': 'This file already exists as an older version',
+  'Falscher Dateityp': 'Wrong file type',
+  'Inzwischen gibt es eine neuere Version': 'There is a newer version now',
+  'Lade die Datei zuerst mit „Zum Bearbeiten herunterladen“ herunter': 'First download the file with “Download to edit”',
+  'Nur die Eigentümer:in kann eine fremde Bearbeitung aufheben': 'Only the owner can cancel someone else’s editing',
+  'Version nicht gefunden': 'Version not found',
 };
 
 /** Translates German `key` into the UI language and fills in {placeholders} from `vars`. */

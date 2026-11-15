@@ -121,7 +121,10 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
 
   router.get('/', (req, res) => {
     const rows = db.prepare(`
-      SELECT d.id, d.title, d.status, d.updated_at, u.name AS owner,
+      SELECT d.id, d.title, d.status, d.kind, d.updated_at, u.name AS owner,
+        (SELECT MAX(v.version) FROM file_versions v WHERE v.doc_id = d.id) AS version,
+        (SELECT name FROM users WHERE id = d.checkout_user) AS checkout,
+        (SELECT v.name FROM file_versions v WHERE v.doc_id = d.id ORDER BY v.version DESC LIMIT 1) AS file_name,
         CASE WHEN d.owner_id = ? THEN 'owner' ELSE m.role END AS role,
         CASE WHEN d.owner_id = ? THEN (SELECT COUNT(*) FROM access_requests r WHERE r.doc_id = d.id) ELSE 0 END AS requests
       FROM documents d
@@ -136,7 +139,7 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
   router.get('/discover', (req, res) => {
     if (!req.user.seeOthers) return res.json([]);
     res.json(withTags(db.prepare(`
-      SELECT d.id, d.title, d.status, d.updated_at, u.name AS owner, r.role AS requested
+      SELECT d.id, d.title, d.status, d.kind, d.updated_at, u.name AS owner, r.role AS requested
       FROM documents d
       LEFT JOIN users u ON u.id = d.owner_id
       LEFT JOIN document_members m ON m.doc_id = d.id AND m.user_id = ?
@@ -155,11 +158,11 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
     const title = String(req.body?.title || 'Unbenanntes Dokument').slice(0, 200);
     db.prepare("INSERT INTO documents (id, title, status, owner_id, created_at, updated_at) VALUES (?, ?, 'idea', ?, ?, ?)")
       .run(id, title, req.user.id, now, now);
-    res.status(201).json({ id, title, status: 'idea', tags: [] });
+    res.status(201).json({ id, title, status: 'idea', kind: 'doc', tags: [] });
   });
 
   router.get('/:id', access(), (req, res) => {
-    const row = db.prepare('SELECT id, title, status FROM documents WHERE id = ?').get(req.params.id);
+    const row = db.prepare('SELECT id, title, status, kind FROM documents WHERE id = ?').get(req.params.id);
     res.json({ ...row, tags: tagsOf(row.id), role: req.role });
   });
 
@@ -237,7 +240,7 @@ export function docsRouter({ onAccessChange, onRequestsChange = () => {} }) {
   // Own request: title, owner, current role (or null), the pending request and whether requesting is allowed.
   // Without access and without "see others", the document stays hidden.
   router.get('/:id/request', (req, res) => {
-    const doc = db.prepare(`SELECT d.title, u.name AS owner FROM documents d LEFT JOIN users u ON u.id = d.owner_id
+    const doc = db.prepare(`SELECT d.title, d.kind, u.name AS owner FROM documents d LEFT JOIN users u ON u.id = d.owner_id
       WHERE d.id = ? AND d.deleted_at IS NULL`).get(req.params.id);
     const role = doc ? roleFor(req.user.id, req.params.id) : null;
     if (!doc || (!role && !req.user.seeOthers)) return res.status(404).json({ error: 'Nicht gefunden' });

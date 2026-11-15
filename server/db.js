@@ -138,3 +138,29 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS document_tags_tag ON document_tags(tag_id);
 `);
+
+// Files (Excel, PowerPoint, PDF …) next to the editor documents: a row in `documents` with kind = 'file'
+// plus versions in `file_versions`. Whoever wants to change a file checks it out; while it is checked out,
+// only that person may upload the next version (server/files.js).
+const docColumns2 = db.prepare('PRAGMA table_info(documents)').all().map((c) => c.name);
+if (!docColumns2.includes('kind')) db.exec("ALTER TABLE documents ADD COLUMN kind TEXT NOT NULL DEFAULT 'doc'");
+if (!docColumns2.includes('checkout_user')) {
+  db.exec('ALTER TABLE documents ADD COLUMN checkout_user INTEGER REFERENCES users(id) ON DELETE SET NULL');
+}
+if (!docColumns2.includes('checkout_version')) db.exec('ALTER TABLE documents ADD COLUMN checkout_version INTEGER');
+if (!docColumns2.includes('checkout_at')) db.exec('ALTER TABLE documents ADD COLUMN checkout_at INTEGER');
+db.exec(`
+  CREATE TABLE IF NOT EXISTS file_versions (
+    doc_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    version INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    sha256 TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    note TEXT,
+    restored_from INTEGER,
+    data BLOB NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (doc_id, version)
+  );
+`);

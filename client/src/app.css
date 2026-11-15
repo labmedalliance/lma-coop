@@ -302,3 +302,17 @@
 .tag-filter {
   max-width: 11rem;
 }
+
+/* File page: a file with versions (client/file.html). */
+.file-page {
+  min-height: 100vh;
+  background: #f1f5f9;
+}
+.file-main {
+  max-width: 960px;
+}
+.file-icon {
+  font-size: 2.75rem;
+  line-height: 1;
+  color: #0f766e;
+}

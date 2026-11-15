@@ -33,6 +33,8 @@ Zusatzfunktion für Publikationen: eine **Literaturliste pro Dokument**. Du füg
 - Export als `.docx`, Drucken bzw. PDF über den Browser
 - Import aus Word (`.docx`) mit Kommentaren, Änderungsverfolgung und Zitaten, siehe [Word-Import](#word-import)
 - Wort- und Zeichenzählung
+- Dateien mit Versionen (Excel, PowerPoint, PDF und andere, bis 25 MB): **Datei hochladen** in der Dokumentliste.
+  Die Datei erscheint als Karte mit Symbol, Versionsnummer und Hinweis „In Bearbeitung", siehe [Dateien mit Versionen](#dateien-mit-versionen)
 - Status pro Dokument: **Idee**, **Work in Progress**, **Finished**, **Archived**. Eigentümer:in und „Bearbeiten"
   setzen ihn im Dokumentkopf. Die Dokumentliste zeigt ihn als Abzeichen und filtert danach; archivierte Dokumente
   blendet sie standardmäßig aus. Neue Dokumente starten als „Idee"
@@ -56,6 +58,32 @@ Zusatzfunktion für Publikationen: eine **Literaturliste pro Dokument**. Du füg
 - Oberfläche auf Deutsch (Standard) oder Englisch: Knopf **EN**/**DE** in der Kopfzeile, Einstellung pro Browser.
   Die Texte stehen in `client/src/i18n.js`; der deutsche Text ist der Schlüssel. Fehlermeldungen des Servers
   übersetzt der Browser. Der Word-Export nutzt die gewählte Sprache für „Literatur"/„References"
+
+## Dateien mit Versionen
+
+LMA Coop bearbeitet Excel-, PowerPoint- und andere Dateien nicht selbst. Es verwahrt sie mit Versionen. Wer etwas
+ändern will, lädt die Datei herunter, bearbeitet sie in Excel und lädt sie wieder hoch. Diese Regeln verhindern
+Versionschaos:
+
+1. **Reservieren:** **Zum Bearbeiten herunterladen** reserviert die Datei für dich. Alle anderen sehen „In Bearbeitung
+   von …" und können nur herunterladen. **Bearbeitung beenden** gibt die Datei ohne neue Version frei.
+2. **Nur mit Reservierung hochladen:** Eine neue Version nimmt der Server nur von der Person an, die die Datei
+   reserviert hat, und nur auf Basis der aktuellen Version.
+3. **Keine alten Fassungen:** Der Server vergleicht jede hochgeladene Datei (SHA-256) mit allen früheren Versionen.
+   Eine unveränderte Datei oder eine alte Fassung lehnt er ab, zum Beispiel: „Das ist Version 3, aktuell ist
+   Version 5". Ist die gewählte Datei älter als die Reservierung, warnt der Dialog vorher.
+4. **Gleicher Dateityp:** Aus einer `.xlsx` wird keine `.docx`.
+
+Alle Versionen bleiben erhalten. **Wiederherstellen** macht eine alte Version zur neuen aktuellen Version.
+Die Eigentümer:in kann eine fremde Reservierung aufheben, etwa wenn jemand im Urlaub ist.
+
+| Rolle | Darf bei Dateien |
+|---|---|
+| Eigentümer:in | alles, auch fremde Reservierung aufheben |
+| Bearbeiten | reservieren, hochladen, wiederherstellen |
+| Vorschlagen, Lesen | nur herunterladen |
+
+Die Dateien liegen in der SQLite-Datenbank (`file_versions`) und sind damit im täglichen Backup enthalten.
 
 ## Rollen und Vorschläge
 

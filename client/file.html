@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <title>Datei – LMA Coop</title>
+  <script type="module" src="./src/file.js"></script>
+</head>
+<body class="file-page">
+  <header class="doc-header d-print-none">
+    <a class="btn btn-ghost-secondary btn-icon" href="/" aria-label="Zur Dokumentliste"><i class="ti ti-arrow-left"></i></a>
+    <input class="form-control doc-title" id="doc-title" aria-label="Dokumenttitel" maxlength="200">
+    <select class="form-select form-select-sm doc-state-select" id="doc-state" aria-label="Status"></select>
+    <span class="doc-status text-secondary small" id="sync-status" hidden></span>
+    <span class="ms-auto"></span>
+    <button class="btn btn-ghost-secondary" id="request-edit" type="button" title="Bearbeiten beantragen" hidden>
+      <i class="ti ti-pencil-plus me-1"></i><span class="header-label">Bearbeiten beantragen</span>
+    </button>
+    <button class="btn btn-ghost-secondary btn-sm" id="lang-switch" type="button"></button>
+    <button class="btn btn-primary" id="share-btn" type="button" title="Freigeben">
+      <i class="ti ti-users me-1"></i><span class="header-label">Freigeben</span>
+      <span class="badge bg-red text-white ms-1" id="request-count" hidden></span>
+    </button>
+  </header>
+
+  <main class="container-xl py-4 file-main" id="editor">
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="d-flex flex-wrap align-items-start gap-3">
+          <span class="file-icon" id="file-icon" aria-hidden="true"><i class="ti ti-file"></i></span>
+          <div class="flex-grow-1 min-w-0">
+            <div class="text-secondary small">Aktuelle Version</div>
+            <div class="h2 mb-1" id="current-title"></div>
+            <div class="text-secondary small" id="current-meta"></div>
+            <div class="small mt-1" id="current-note"></div>
+          </div>
+        </div>
+        <div class="alert mt-3 mb-0" id="checkout-box" role="status" hidden></div>
+        <div class="d-flex flex-wrap gap-2 mt-3" id="file-actions">
+          <button class="btn" id="download-btn" type="button"><i class="ti ti-download me-1"></i>Herunterladen</button>
+          <button class="btn btn-primary" id="checkout-btn" type="button" hidden
+            title="Reserviert die Datei für dich, bis du die geänderte Fassung hochlädst"><i class="ti ti-file-download me-1"></i>Zum Bearbeiten herunterladen</button>
+          <button class="btn btn-primary" id="upload-btn" type="button" hidden><i class="ti ti-upload me-1"></i>Geänderte Datei hochladen</button>
+          <button class="btn" id="release-btn" type="button" hidden><i class="ti ti-lock-open me-1"></i>Bearbeitung beenden</button>
+          <button class="btn btn-ghost-danger" id="break-btn" type="button" hidden><i class="ti ti-lock-open me-1"></i>Reservierung aufheben</button>
+        </div>
+        <p class="text-secondary small mt-3 mb-0" id="how-to">So bleibt die Versionierung sauber: Wer etwas ändern will, lädt die
+          Datei mit <strong>Zum Bearbeiten herunterladen</strong>. Damit ist sie für diese Person reserviert. Andere können sie
+          weiter herunterladen, aber keine neue Version hochladen. Alte Fassungen nimmt LMA Coop nicht noch einmal an.</p>
+      </div>
+    </div>
+
+    <h2 class="h3">Versionen</h2>
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr><th>Version</th><th>Datum</th><th>Von</th><th class="d-none d-md-table-cell">Größe</th><th>Notiz</th><th></th></tr>
+          </thead>
+          <tbody id="version-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <dialog class="cite-dialog" id="upload-dialog" aria-labelledby="upload-title">
+    <form method="dialog" id="upload-form">
+      <h2 class="h3" id="upload-title">Geänderte Datei hochladen</h2>
+      <p class="text-secondary small" id="upload-hint"></p>
+      <label class="form-label" for="upload-file">Datei</label>
+      <input class="form-control mb-3" type="file" id="upload-file" required>
+      <label class="form-label" for="upload-note">Was hast du geändert? (optional)</label>
+      <textarea class="form-control" id="upload-note" rows="2" maxlength="500"></textarea>
+      <div class="alert alert-warning small mt-3 mb-0" id="upload-warning" hidden></div>
+      <div class="text-danger small mt-2" id="upload-error" role="alert"></div>
+      <div class="d-flex justify-content-end gap-2 mt-3">
+        <button class="btn" value="cancel" type="submit" formnovalidate>Abbrechen</button>
+        <button class="btn btn-primary" id="upload-submit" type="button">Hochladen</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="cite-dialog" id="confirm-dialog" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <h2 class="h3" id="confirm-title">Bist du sicher?</h2>
+      <p class="text-secondary" id="confirm-text"></p>
+      <div class="d-flex justify-content-end gap-2">
+        <button class="btn" value="cancel" type="submit" autofocus>Abbrechen</button>
+        <button class="btn btn-primary" value="ok" type="submit" id="confirm-ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="cite-dialog" id="share-dialog" aria-labelledby="share-title">
+    <form method="dialog">
+      <h2 class="h3" id="share-title">Freigeben</h2>
+      <p class="text-secondary small mb-2">Wer darf diese Datei sehen? <strong>Bearbeiten</strong> darf neue Versionen
+        hochladen. <strong>Lesen</strong> darf nur herunterladen.</p>
+      <div class="request-section" id="request-section" hidden>
+        <h3 class="h4 mb-1">Anträge</h3>
+        <ul class="member-list" id="request-list"></ul>
+      </div>
+      <ul class="member-list" id="member-list"></ul>
+      <div class="share-add" id="share-add">
+        <select class="form-select" id="share-user" aria-label="Person"></select>
+        <select class="form-select" id="share-role" aria-label="Rolle">
+          <option value="editor">Bearbeiten</option>
+          <option value="viewer">Lesen</option>
+        </select>
+        <button class="btn btn-primary" id="share-add-btn" type="button">Hinzufügen</button>
+      </div>
+      <div class="text-danger small mt-2" id="share-error" role="alert"></div>
+      <div class="d-flex justify-content-end mt-3">
+        <button class="btn" value="close" type="submit">Schließen</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

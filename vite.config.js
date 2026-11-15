@@ -32,6 +32,7 @@ export default defineConfig({
         index: path.join(root, 'index.html'),
         login: path.join(root, 'login.html'),
         doc: path.join(root, 'doc.html'),
+        file: path.join(root, 'file.html'),
         admin: path.join(root, 'admin.html'),
         about: path.join(root, 'about.html'),
       },

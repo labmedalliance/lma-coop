@@ -6,6 +6,7 @@ import { url } from './paths.js';
 import { statusBadge } from './status.js';
 import { tagBadge, setupTagDialog, setupTagManager } from './tags.js';
 import { savePendingImport } from './pending-import.js';
+import { fileIcon, extOf } from './file-kinds.js';
 
 const grid = document.getElementById('doc-grid');
 const empty = document.getElementById('empty-state');
@@ -71,6 +72,22 @@ function fillTagFilter() {
   tagFilter.hidden = sorted.length === 0;
 }
 
+// Text documents open in the editor, files with versions on the file page.
+const docUrl = (d) => url(d.kind === 'file' ? `/f/${d.id}` : `/d/${d.id}`);
+
+/** Title line of a card; files get an icon for their type. */
+function cardTitle(d) {
+  const title = document.createElement('div');
+  title.className = 'fw-bold mb-1 text-truncate';
+  if (d.kind === 'file') {
+    const icon = document.createElement('i');
+    icon.className = `ti ${fileIcon(extOf(d.file_name))} me-1 text-secondary`;
+    title.append(icon);
+  }
+  title.append(d.title);
+  return title;
+}
+
 function render() {
   const q = filter.value.trim().toLowerCase();
   const shown = docs.filter((d) => matches(d, q));
@@ -78,15 +95,25 @@ function render() {
     const card = document.createElement('div');
     card.className = 'card card-link doc-card';
     const link = document.createElement('a');
-    link.href = url(`/d/${d.id}`);
+    link.href = docUrl(d);
     link.className = 'card-body text-reset text-decoration-none';
-    const title = document.createElement('div');
-    title.className = 'fw-bold mb-1 text-truncate';
-    title.textContent = d.title;
     const meta = document.createElement('div');
     meta.className = 'text-secondary small';
     meta.textContent = `${d.owner || '–'} · ${dateFmt.format(d.updated_at)}`;
-    link.append(title, meta);
+    link.append(cardTitle(d), meta);
+    if (d.kind === 'file') {
+      const file = document.createElement('div');
+      file.className = 'small text-secondary';
+      file.textContent = `.${extOf(d.file_name)} · ${t('Version {v}', { v: d.version })}`;
+      link.append(file);
+    }
+    if (d.checkout) {
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-purple-lt d-inline-block mt-2 me-1';
+      badge.innerHTML = '<i class="ti ti-lock me-1"></i>';
+      badge.append(t('In Bearbeitung: {name}', { name: d.checkout }));
+      link.append(badge);
+    }
     const state = statusBadge(d.status);
     if (state) link.append(state);
     if (ROLE_BADGES[d.role]) {
@@ -127,11 +154,9 @@ function renderOthers(q) {
     const card = document.createElement('div');
     card.className = 'card card-link doc-card doc-card-locked';
     const link = document.createElement('a');
-    link.href = url(`/d/${d.id}`);
+    link.href = docUrl(d);
     link.className = 'card-body text-reset text-decoration-none';
-    const title = document.createElement('div');
-    title.className = 'fw-bold mb-1 text-truncate';
-    title.textContent = d.title;
+    const title = cardTitle(d);
     const meta = document.createElement('div');
     meta.className = 'text-secondary small';
     meta.textContent = `${d.owner || '–'} · ${dateFmt.format(d.updated_at)}`;
@@ -201,6 +226,26 @@ importInput.addEventListener('change', async () => {
     toast(err.message);
   }
 });
+// Any other file (Excel, PowerPoint, PDF …) becomes a file with versions.
+const fileInput = document.getElementById('file-input');
+document.getElementById('file-btn').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', async () => {
+  const [file] = fileInput.files;
+  fileInput.value = '';
+  if (!file) return;
+  try {
+    const res = await fetch(url('/api/files'), {
+      method: 'POST',
+      body: file,
+      headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ? t(data.error) : `${t('Fehler')} ${res.status}`);
+    window.location.href = url(`/f/${data.id}`);
+  } catch (err) {
+    toast(err.message);
+  }
+});
 document.getElementById('logout-btn').addEventListener('click', logout);
 filter.addEventListener('input', render);
 stateFilter.addEventListener('change', () => {
@@ -230,6 +275,7 @@ const meLoaded = api('/api/me').then((me) => {
   document.getElementById('admin-link').hidden = !me.isAdmin;
   document.getElementById('new-doc-btn').hidden = !me.canCreate;
   document.getElementById('import-btn').hidden = !me.canCreate;
+  document.getElementById('file-btn').hidden = !me.canCreate;
   document.getElementById('empty-create-hint').hidden = !me.canCreate;
   canRequest = me.canRequest;
   openTagDialog = setupTagDialog({ isAdmin: me.isAdmin, onChange: tagsChanged });

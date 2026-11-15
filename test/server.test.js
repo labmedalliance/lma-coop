@@ -241,7 +241,7 @@ test('users request access or edit rights; the owner approves or declines', asyn
 
   assert.equal((await json(clara, `/api/docs/${randomUUID()}/request`)).status, 404, 'unknown document');
   assert.deepEqual(await (await json(clara, `/api/docs/${id}/request`)).json(),
-    { title: 'Requested paper', owner: 'Anna', role: null, pending: null, canRequest: true });
+    { title: 'Requested paper', kind: 'doc', owner: 'Anna', role: null, pending: null, canRequest: true });
   let other = (await (await json(clara, '/api/docs/discover')).json()).find((d) => d.id === id);
   assert.equal(other.title, 'Requested paper');
   assert.equal(other.requested, null);

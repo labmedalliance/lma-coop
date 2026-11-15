@@ -40,6 +40,11 @@ try {
   await showNoAccess(docId);
   await new Promise(() => {});
 }
+// Files with versions have their own page.
+if (meta.kind === 'file') {
+  window.location.replace(url(`/f/${docId}`));
+  await new Promise(() => {});
+}
 const myColor = colorFor(me.name);
 const role = meta.role; // owner | editor | suggester | viewer
 const canEdit = role === 'owner' || role === 'editor';
