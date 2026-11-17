@@ -171,8 +171,14 @@ document.addEventListener('keydown', (e) => {
     save();
   }
 });
+// Warn before closing or leaving the page while changes would be lost: unsaved local changes, or saved
+// changes the server has not confirmed yet (e.g. offline). Nothing is kept in the browser across reloads.
+let forcedReload = false;
 window.addEventListener('beforeunload', (e) => {
-  if (pending.length) e.preventDefault();
+  if (forcedReload) return;
+  if (!pending.length && !provider.hasUnsyncedChanges) return;
+  e.preventDefault();
+  e.returnValue = ''; // Older Safari/Chrome only show the dialog with returnValue set.
 });
 updateSyncStatus();
 provider.on('authenticationFailed', () => {
@@ -190,7 +196,8 @@ provider.on('close', ({ event }) => {
   } else {
     return;
   }
-  setTimeout(() => window.location.reload(), 1500);
+  // The rejected change is dropped on purpose, so do not ask before reloading.
+  setTimeout(() => { forcedReload = true; window.location.reload(); }, 1500);
 });
 
 provider.on('awarenessChange', ({ states }) => {
