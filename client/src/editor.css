@@ -584,14 +584,55 @@ body.is-suggesting .prose {
 
 /* Comments */
 .prose .comment-anchor {
-  background: rgb(250 204 21 / 0.3);
-  border-bottom: 2px solid rgb(234 179 8 / 0.7);
+  background: rgb(250 204 21 / 0.25);
+  border-bottom: 2px solid rgb(234 179 8 / 0.6);
   cursor: pointer;
 }
 
-.prose .comment-anchor.is-active {
-  background: rgb(250 204 21 / 0.6);
+.prose .comment-anchor.is-hover {
+  background: rgb(250 204 21 / 0.5);
+  border-bottom-color: #ca8a04;
 }
+
+/* The text of the active comment stands out clearly from all other commented text. */
+.prose .comment-anchor.is-active {
+  background: rgb(249 115 22 / 0.35);
+  border-bottom: 3px solid #ea580c;
+  box-shadow: 0 0 0 1px rgb(234 88 12 / 0.35);
+  border-radius: 2px;
+}
+
+.prose .comment-anchor.is-flash {
+  animation: comment-flash 1.2s ease-out;
+}
+
+@keyframes comment-flash {
+  0%, 30% { background: rgb(249 115 22 / 0.7); box-shadow: 0 0 0 4px rgb(249 115 22 / 0.45); }
+  100% { box-shadow: 0 0 0 4px rgb(249 115 22 / 0); }
+}
+
+/* Line from the active comment to its text (comments.js, setupConnector). */
+.comment-connector {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+  overflow: visible;
+}
+
+.comment-connector path {
+  fill: none;
+  stroke: #ea580c;
+  stroke-width: 1.75;
+}
+
+.comment-connector circle {
+  fill: #ea580c;
+}
+
+.comment-connector[hidden] { display: none; }
 
 .comment-list {
   list-style: none;
@@ -611,8 +652,16 @@ body.is-suggesting .prose {
 }
 
 .comment-thread.is-active {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 1px #ea580c, 0 2px 10px rgb(0 0 0 / 0.08);
+}
+
+.comment-thread.is-active .comment-quote {
+  border-left-color: #ea580c;
+}
+
+.comment-thread.is-hover:not(.is-active) {
   border-color: #eab308;
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.08);
 }
 
 .comment-thread.is-resolved {

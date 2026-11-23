@@ -13,17 +13,21 @@ import { commentRanges } from './comment-mark.js';
 
 const $ = (id) => document.getElementById(id);
 const highlightKey = new PluginKey('commentHighlight');
+// Thread id of the comment being written, on its card and its highlight.
+const DRAFT = 'draft';
 
 /**
  * Highlights the anchors of open threads and the draft range of a new comment.
- * Meta { open: Set, active: id|null, draft: {from,to}|null } updates the state; the draft follows edits.
+ * Meta { open: Set, active: id|null, hover: id|null, flash: id|null, draft: {from,to}|null } updates the state; the draft
+ * follows edits. Classes inside the editor must come from decorations: ProseMirror redraws nodes whose
+ * attributes are changed from outside.
  */
 export const CommentHighlight = Extension.create({
   name: 'commentHighlight',
   addProseMirrorPlugins: () => [new Plugin({
     key: highlightKey,
     state: {
-      init: () => ({ open: new Set(), active: null, draft: null, decorations: DecorationSet.empty }),
+      init: () => ({ open: new Set(), active: null, hover: null, flash: null, draft: null, decorations: DecorationSet.empty }),
       apply(tr, value, _old, newState) {
         const meta = tr.getMeta(highlightKey);
         if (!meta && !tr.docChanged) return value;
@@ -37,10 +41,13 @@ export const CommentHighlight = Extension.create({
         for (const [id, { from, to }] of commentRanges(newState.doc)) {
           if (!next.open.has(id)) continue;
           decorations.push(Decoration.inline(from, to, {
-            class: id === next.active ? 'comment-anchor is-active' : 'comment-anchor',
+            class: ['comment-anchor', id === next.active && 'is-active', id === next.hover && 'is-hover', id === next.flash && 'is-flash'].filter(Boolean).join(' '),
+            'data-thread': id,
           }));
         }
-        if (next.draft) decorations.push(Decoration.inline(next.draft.from, next.draft.to, { class: 'comment-anchor is-active' }));
+        if (next.draft) {
+          decorations.push(Decoration.inline(next.draft.from, next.draft.to, { class: 'comment-anchor is-active', 'data-thread': DRAFT }));
+        }
         next.decorations = DecorationSet.create(newState.doc, decorations);
         return next;
       },
@@ -48,6 +55,66 @@ export const CommentHighlight = Extension.create({
     props: { decorations: (state) => highlightKey.getState(state).decorations },
   })],
 });
+
+/**
+ * Draws a line from the active comment to its text, like Google Docs: along the bottom of the text line to
+ * the page edge, then over to the card. Hidden when either end is scrolled out of view or the panel lies
+ * over the page (narrow screens).
+ */
+function setupConnector({ panel, list, sheet, target, anchorEls, cardEl }) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.classList.add('comment-connector', 'd-print-none');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(NS, 'path');
+  const dot = document.createElementNS(NS, 'circle');
+  dot.setAttribute('r', '3');
+  svg.append(path, dot);
+  document.body.append(svg);
+  const scroller = sheet?.closest('.sheet-scroll');
+
+  function draw() {
+    const id = target();
+    const spans = id && !panel.hidden && sheet ? anchorEls(id) : [];
+    const card = spans.length ? cardEl(id) : null;
+    const narrow = window.matchMedia('(max-width: 900px)').matches;
+    if (!card || narrow) { svg.hidden = true; return; }
+    const rects = spans.flatMap((s) => [...s.getClientRects()]).filter((r) => r.width || r.height);
+    if (!rects.length) { svg.hidden = true; return; }
+    // The last line of the first paragraph the anchor touches: start at its right end.
+    const top = Math.min(...rects.map((r) => r.top));
+    const firstLine = rects.filter((r) => r.top < top + 4);
+    const start = { x: Math.max(...firstLine.map((r) => r.right)), y: Math.max(...firstLine.map((r) => r.bottom)) };
+    const sheetBox = sheet.getBoundingClientRect();
+    const view = scroller?.getBoundingClientRect() ?? sheetBox;
+    const cardBox = card.getBoundingClientRect();
+    const panelBox = panel.getBoundingClientRect();
+    const end = { x: cardBox.left, y: Math.min(cardBox.top + 18, cardBox.bottom - 4) };
+    const visible = start.y > view.top && start.y < view.bottom
+      && end.y > panelBox.top && end.y < panelBox.bottom;
+    if (!visible) { svg.hidden = true; return; }
+    const edge = Math.max(start.x, sheetBox.right - 24);
+    const bend = Math.max(12, (end.x - edge) / 2);
+    path.setAttribute('d', `M${start.x},${start.y} H${edge} C${edge + bend},${start.y} ${end.x - bend},${end.y} ${end.x},${end.y}`);
+    dot.setAttribute('cx', String(start.x));
+    dot.setAttribute('cy', String(start.y));
+    svg.hidden = false;
+  }
+
+  let queued = false;
+  const update = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; draw(); });
+  };
+  // Capture: scrolling of the page and of the comment list, including smooth scrolling.
+  window.addEventListener('scroll', update, true);
+  window.addEventListener('resize', update);
+  const resize = new ResizeObserver(update);
+  if (sheet) resize.observe(sheet);
+  resize.observe(list);
+  return { update };
+}
 
 const formatTime = (ms) => new Date(ms).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
 
@@ -137,11 +204,21 @@ export function setupComments({ editor, docId, me, canEdit, canComment = true, p
   let active = null;
   let editing = null; // id of the comment being edited
   let draft = null; // { from, to, quote } while writing a new comment
+  const connector = setupConnector({
+    panel,
+    list,
+    sheet: document.querySelector('.sheet'),
+    target: () => (draft ? DRAFT : active),
+    anchorEls: (id) => anchorEls(id),
+    cardEl: (id) => (id === DRAFT ? list.querySelector('.comment-draft') : cardEl(id)),
+  });
+  editor.on('transaction', () => connector.update());
 
   // --- Panel ---
   function togglePanel(show = panel.hidden) {
     panel.hidden = !show;
     toggleBtn.setAttribute('aria-pressed', String(show));
+    connector.update();
     if (show) {
       for (const [p, b] of [['refs-panel', 'toggle-refs'], ['suggestions-panel', 'toggle-suggestions']]) {
         $(p).hidden = true;
@@ -156,6 +233,7 @@ export function setupComments({ editor, docId, me, canEdit, canComment = true, p
     $(id).addEventListener('click', () => {
       panel.hidden = true;
       toggleBtn.setAttribute('aria-pressed', 'false');
+      connector.update();
     });
   }
   showResolved.addEventListener('change', render);
@@ -164,18 +242,66 @@ export function setupComments({ editor, docId, me, canEdit, canComment = true, p
   const setHighlight = (meta) => editor.view.dispatch(editor.state.tr.setMeta(highlightKey, meta).setMeta('addToHistory', false));
   const openIds = () => new Set(threads.filter((th) => !th.resolvedAt).map((th) => th.id));
 
+  const anchorEls = (id) => [...editor.view.dom.querySelectorAll(`.comment-anchor[data-thread="${CSS.escape(id)}"]`)];
+  const cardEl = (id) => list.querySelector(`.comment-thread[data-id="${CSS.escape(id)}"]`);
+
   function setActive(id, { scrollCard = false } = {}) {
     active = id;
     setHighlight({ active });
     list.querySelectorAll('.comment-thread').forEach((li) => li.classList.toggle('is-active', li.dataset.id === id));
-    if (scrollCard && id) list.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (scrollCard && id) cardEl(id)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    connector.update();
   }
 
+  /**
+   * Scrolls the commented text to the middle of the page and lets it flash briefly. The text is not
+   * selected: the browser's selection colour would cover the highlight.
+   */
   function selectAnchor(id) {
-    const range = commentRanges(editor.state.doc).get(id);
-    if (!range) return;
-    editor.chain().setTextSelection(range).scrollIntoView().run();
+    const [first] = anchorEls(id);
+    if (!first) return;
+    first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    clearTimeout(flashTimer);
+    setHighlight({ flash: null });
+    requestAnimationFrame(() => setHighlight({ flash: id }));
+    flashTimer = setTimeout(() => setHighlight({ flash: null }), 1300);
   }
+  let flashTimer;
+
+  // Hovering a card or its text marks the other side, so it is clear which belong together.
+  let hover = null;
+  function setHover(id, on) {
+    if (!id || (on ? hover === id : hover !== id)) return;
+    if (hover) cardEl(hover)?.classList.remove('is-hover');
+    hover = on ? id : null;
+    if (hover) cardEl(hover)?.classList.add('is-hover');
+    setHighlight({ hover });
+  }
+  list.addEventListener('mouseover', (e) => {
+    const li = e.target.closest('.comment-thread[data-id]');
+    if (li && !li.contains(e.relatedTarget)) setHover(li.dataset.id, true);
+  });
+  list.addEventListener('mouseout', (e) => {
+    const li = e.target.closest('.comment-thread[data-id]');
+    if (li && !li.contains(e.relatedTarget)) setHover(li.dataset.id, false);
+  });
+  editor.view.dom.addEventListener('mouseover', (e) => {
+    const span = e.target.closest('.comment-anchor[data-thread]');
+    if (span && !span.contains(e.relatedTarget)) setHover(span.dataset.thread, true);
+  });
+  editor.view.dom.addEventListener('mouseout', (e) => {
+    const span = e.target.closest('.comment-anchor[data-thread]');
+    if (span && !span.contains(e.relatedTarget)) setHover(span.dataset.thread, false);
+  });
+
+  // A click on commented text opens its thread, also a second click on the same text and for the
+  // innermost of overlapping threads.
+  editor.view.dom.addEventListener('click', (e) => {
+    const span = e.target.closest('.comment-anchor[data-thread]');
+    if (!span || span.dataset.thread === DRAFT || draft || !editor.state.selection.empty) return;
+    togglePanel(true);
+    setActive(span.dataset.thread, { scrollCard: true });
+  });
 
   // Clicking commented text opens its thread, like Google Docs.
   editor.on('selectionUpdate', () => queueMicrotask(openThreadAtCursor));
@@ -400,6 +526,7 @@ export function setupComments({ editor, docId, me, canEdit, canComment = true, p
       if (area.dataset.key === focusedKey) area.focus();
     }
     lastLayout = layoutOf();
+    connector.update();
   }
 
   // Order of anchored threads; the list only needs a rebuild when it changes.
